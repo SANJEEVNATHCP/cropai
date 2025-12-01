@@ -1,0 +1,363 @@
+from flask import Blueprint, request, jsonify
+import json
+import os
+import requests
+from datetime import datetime
+
+yield_bp = Blueprint('yield', __name__)
+
+# OpenWeatherMap API key
+OPENWEATHER_API_KEY = 'b576d8a952bf4c45c7ef5bddb148e76b'
+
+# State capital cities for weather lookup
+STATE_CITIES = {
+    'Punjab': {'city': 'Chandigarh', 'lat': 30.7333, 'lon': 76.7794},
+    'Haryana': {'city': 'Chandigarh', 'lat': 30.7333, 'lon': 76.7794},
+    'Uttar Pradesh': {'city': 'Lucknow', 'lat': 26.8467, 'lon': 80.9462},
+    'West Bengal': {'city': 'Kolkata', 'lat': 22.5726, 'lon': 88.3639},
+    'Andhra Pradesh': {'city': 'Visakhapatnam', 'lat': 17.6868, 'lon': 83.2185},
+    'Tamil Nadu': {'city': 'Chennai', 'lat': 13.0827, 'lon': 80.2707},
+    'Karnataka': {'city': 'Bangalore', 'lat': 12.9716, 'lon': 77.5946},
+    'Maharashtra': {'city': 'Mumbai', 'lat': 19.0760, 'lon': 72.8777},
+    'Madhya Pradesh': {'city': 'Bhopal', 'lat': 23.2599, 'lon': 77.4126},
+    'Gujarat': {'city': 'Ahmedabad', 'lat': 23.0225, 'lon': 72.5714},
+    'Rajasthan': {'city': 'Jaipur', 'lat': 26.9124, 'lon': 75.7873},
+    'Bihar': {'city': 'Patna', 'lat': 25.5941, 'lon': 85.1376},
+    'Odisha': {'city': 'Bhubaneswar', 'lat': 20.2961, 'lon': 85.8245},
+    'Assam': {'city': 'Guwahati', 'lat': 26.1445, 'lon': 91.7362},
+    'Jharkhand': {'city': 'Ranchi', 'lat': 23.3441, 'lon': 85.3096},
+    'Chhattisgarh': {'city': 'Raipur', 'lat': 21.2514, 'lon': 81.6296},
+    'Kerala': {'city': 'Kochi', 'lat': 9.9312, 'lon': 76.2673},
+    'Telangana': {'city': 'Hyderabad', 'lat': 17.3850, 'lon': 78.4867},
+}
+
+def get_live_weather(state):
+    """Fetch live weather data for a state"""
+    if state not in STATE_CITIES:
+        return None
+    
+    city_data = STATE_CITIES[state]
+    try:
+        url = "https://api.openweathermap.org/data/2.5/weather"
+        params = {
+            'lat': city_data['lat'],
+            'lon': city_data['lon'],
+            'appid': OPENWEATHER_API_KEY,
+            'units': 'metric'
+        }
+        response = requests.get(url, params=params, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                'temperature': data['main']['temp'],
+                'humidity': data['main']['humidity'],
+                'condition': data['weather'][0]['main'],
+                'description': data['weather'][0]['description'],
+                'city': city_data['city'],
+                'source': 'live'
+            }
+    except Exception as e:
+        print(f"Weather API error: {e}")
+    return None
+
+# Crop yield data (average yields in kg/hectare for India)
+CROP_YIELD_DATA = {
+    'rice': {'avg_yield': 2500, 'optimal_n': 120, 'optimal_p': 60, 'optimal_k': 40, 'optimal_ph': (5.5, 7.0), 'water_need': 'High'},
+    'wheat': {'avg_yield': 3200, 'optimal_n': 120, 'optimal_p': 60, 'optimal_k': 40, 'optimal_ph': (6.0, 7.5), 'water_need': 'Medium'},
+    'maize': {'avg_yield': 2800, 'optimal_n': 150, 'optimal_p': 75, 'optimal_k': 50, 'optimal_ph': (5.8, 7.0), 'water_need': 'Medium'},
+    'cotton': {'avg_yield': 500, 'optimal_n': 100, 'optimal_p': 50, 'optimal_k': 50, 'optimal_ph': (6.0, 8.0), 'water_need': 'Medium'},
+    'sugarcane': {'avg_yield': 70000, 'optimal_n': 250, 'optimal_p': 100, 'optimal_k': 120, 'optimal_ph': (6.0, 7.5), 'water_need': 'High'},
+    'soybean': {'avg_yield': 1200, 'optimal_n': 25, 'optimal_p': 60, 'optimal_k': 40, 'optimal_ph': (6.0, 7.0), 'water_need': 'Medium'},
+    'groundnut': {'avg_yield': 1500, 'optimal_n': 20, 'optimal_p': 40, 'optimal_k': 50, 'optimal_ph': (6.0, 6.5), 'water_need': 'Low'},
+    'potato': {'avg_yield': 22000, 'optimal_n': 180, 'optimal_p': 100, 'optimal_k': 150, 'optimal_ph': (5.5, 6.5), 'water_need': 'High'},
+    'tomato': {'avg_yield': 25000, 'optimal_n': 150, 'optimal_p': 80, 'optimal_k': 100, 'optimal_ph': (6.0, 7.0), 'water_need': 'High'},
+    'onion': {'avg_yield': 18000, 'optimal_n': 100, 'optimal_p': 50, 'optimal_k': 80, 'optimal_ph': (6.0, 7.0), 'water_need': 'Medium'},
+    'mustard': {'avg_yield': 1200, 'optimal_n': 80, 'optimal_p': 40, 'optimal_k': 40, 'optimal_ph': (6.0, 7.5), 'water_need': 'Low'},
+    'chickpea': {'avg_yield': 1000, 'optimal_n': 20, 'optimal_p': 50, 'optimal_k': 20, 'optimal_ph': (6.0, 8.0), 'water_need': 'Low'},
+    'bajra': {'avg_yield': 1200, 'optimal_n': 60, 'optimal_p': 30, 'optimal_k': 30, 'optimal_ph': (6.5, 7.5), 'water_need': 'Low'},
+    'jowar': {'avg_yield': 1100, 'optimal_n': 80, 'optimal_p': 40, 'optimal_k': 40, 'optimal_ph': (6.0, 7.5), 'water_need': 'Low'},
+}
+
+# State-wise yield adjustment factors
+STATE_FACTORS = {
+    'Punjab': 1.25, 'Haryana': 1.20, 'Uttar Pradesh': 1.10,
+    'West Bengal': 1.15, 'Andhra Pradesh': 1.10, 'Tamil Nadu': 1.05,
+    'Karnataka': 1.00, 'Maharashtra': 0.95, 'Madhya Pradesh': 0.95,
+    'Gujarat': 1.05, 'Rajasthan': 0.85, 'Bihar': 1.00,
+    'Odisha': 0.95, 'Assam': 0.90, 'Jharkhand': 0.85,
+    'Chhattisgarh': 0.90, 'Kerala': 1.00, 'Telangana': 1.05,
+}
+
+
+def calculate_soil_factor(crop, n, p, k, ph):
+    """Calculate yield factor based on soil nutrients"""
+    if crop not in CROP_YIELD_DATA:
+        return 1.0
+    
+    crop_data = CROP_YIELD_DATA[crop]
+    
+    # NPK factor (0.5 to 1.2)
+    n_ratio = min(n / crop_data['optimal_n'], 1.2) if crop_data['optimal_n'] > 0 else 1.0
+    p_ratio = min(p / crop_data['optimal_p'], 1.2) if crop_data['optimal_p'] > 0 else 1.0
+    k_ratio = min(k / crop_data['optimal_k'], 1.2) if crop_data['optimal_k'] > 0 else 1.0
+    
+    npk_factor = (n_ratio * 0.4 + p_ratio * 0.3 + k_ratio * 0.3)
+    
+    # pH factor
+    optimal_ph_min, optimal_ph_max = crop_data['optimal_ph']
+    if optimal_ph_min <= ph <= optimal_ph_max:
+        ph_factor = 1.0
+    elif ph < optimal_ph_min:
+        ph_factor = max(0.7, 1 - (optimal_ph_min - ph) * 0.1)
+    else:
+        ph_factor = max(0.7, 1 - (ph - optimal_ph_max) * 0.1)
+    
+    return npk_factor * ph_factor
+
+
+def calculate_weather_factor(crop, rainfall, temperature, humidity):
+    """Calculate yield factor based on weather conditions"""
+    if crop not in CROP_YIELD_DATA:
+        return 1.0
+    
+    crop_data = CROP_YIELD_DATA[crop]
+    water_need = crop_data['water_need']
+    
+    # Rainfall factor
+    if water_need == 'High':
+        optimal_rainfall = 1200
+    elif water_need == 'Medium':
+        optimal_rainfall = 800
+    else:
+        optimal_rainfall = 400
+    
+    rainfall_ratio = rainfall / optimal_rainfall if optimal_rainfall > 0 else 1.0
+    if rainfall_ratio > 1.5:
+        rainfall_factor = max(0.6, 1.5 - (rainfall_ratio - 1.5) * 0.5)
+    elif rainfall_ratio < 0.5:
+        rainfall_factor = max(0.5, rainfall_ratio * 1.5)
+    else:
+        rainfall_factor = min(1.2, 0.8 + rainfall_ratio * 0.3)
+    
+    # Temperature factor (optimal 20-30°C for most crops)
+    if 20 <= temperature <= 30:
+        temp_factor = 1.0
+    elif temperature < 20:
+        temp_factor = max(0.6, 1 - (20 - temperature) * 0.03)
+    else:
+        temp_factor = max(0.6, 1 - (temperature - 30) * 0.03)
+    
+    # Humidity factor
+    if 60 <= humidity <= 80:
+        humidity_factor = 1.0
+    else:
+        humidity_factor = max(0.8, 1 - abs(humidity - 70) * 0.005)
+    
+    return rainfall_factor * 0.4 + temp_factor * 0.35 + humidity_factor * 0.25
+
+
+def predict_yield(crop, state, n, p, k, ph, rainfall, temperature, humidity, area=1):
+    """Main yield prediction function"""
+    crop = crop.lower()
+    
+    if crop not in CROP_YIELD_DATA:
+        return None, "Crop not found in database"
+    
+    base_yield = CROP_YIELD_DATA[crop]['avg_yield']
+    
+    # Apply factors
+    soil_factor = calculate_soil_factor(crop, n, p, k, ph)
+    weather_factor = calculate_weather_factor(crop, rainfall, temperature, humidity)
+    state_factor = STATE_FACTORS.get(state, 1.0)
+    
+    # Calculate predicted yield
+    predicted_yield = base_yield * soil_factor * weather_factor * state_factor
+    
+    # Confidence calculation
+    confidence = min(95, 70 + soil_factor * 10 + weather_factor * 10)
+    
+    # Category
+    yield_ratio = predicted_yield / base_yield
+    if yield_ratio >= 1.1:
+        category = 'High'
+    elif yield_ratio >= 0.9:
+        category = 'Medium'
+    else:
+        category = 'Low'
+    
+    # Generate insights
+    insights = generate_insights(crop, soil_factor, weather_factor, state_factor, n, p, k, ph, rainfall)
+    recommendations = generate_recommendations(crop, n, p, k, ph, rainfall, category)
+    
+    return {
+        'crop': crop.title(),
+        'predicted_yield': round(predicted_yield, 2),
+        'total_yield': round(predicted_yield * area, 2),
+        'unit': 'kg/hectare',
+        'confidence': round(confidence, 1),
+        'category': category,
+        'base_yield': base_yield,
+        'factors': {
+            'soil_factor': round(soil_factor, 2),
+            'weather_factor': round(weather_factor, 2),
+            'state_factor': round(state_factor, 2)
+        },
+        'insights': insights,
+        'recommendations': recommendations
+    }, None
+
+
+def generate_insights(crop, soil_factor, weather_factor, state_factor, n, p, k, ph, rainfall):
+    """Generate AI-like insights"""
+    insights = []
+    
+    if soil_factor < 0.9:
+        insights.append("⚠️ Soil nutrients are below optimal levels. Consider soil testing and fertilizer application.")
+    elif soil_factor > 1.1:
+        insights.append("✅ Excellent soil nutrient levels for this crop.")
+    
+    if weather_factor < 0.9:
+        insights.append("⚠️ Weather conditions may impact yield. Consider irrigation or protective measures.")
+    elif weather_factor > 1.05:
+        insights.append("✅ Weather conditions are favorable for high yield.")
+    
+    if state_factor > 1.1:
+        insights.append(f"✅ Your state has historically higher yields for {crop}.")
+    elif state_factor < 0.9:
+        insights.append(f"📊 Average yields for {crop} in your state are typically lower. Focus on best practices.")
+    
+    crop_data = CROP_YIELD_DATA.get(crop.lower(), {})
+    if crop_data:
+        if n < crop_data.get('optimal_n', 0) * 0.7:
+            insights.append(f"💡 Nitrogen levels are low. Recommended: {crop_data['optimal_n']} kg/ha")
+        if p < crop_data.get('optimal_p', 0) * 0.7:
+            insights.append(f"💡 Phosphorus levels are low. Recommended: {crop_data['optimal_p']} kg/ha")
+        if k < crop_data.get('optimal_k', 0) * 0.7:
+            insights.append(f"💡 Potassium levels are low. Recommended: {crop_data['optimal_k']} kg/ha")
+    
+    return insights
+
+
+def generate_recommendations(crop, n, p, k, ph, rainfall, category):
+    """Generate actionable recommendations"""
+    recommendations = []
+    crop_data = CROP_YIELD_DATA.get(crop.lower(), {})
+    
+    if category == 'Low':
+        recommendations.append("🔴 Consider soil amendment and improved irrigation")
+        recommendations.append("🔴 Consult with an agricultural expert via LiveKit call")
+    elif category == 'Medium':
+        recommendations.append("🟡 Minor improvements in fertilizer management can boost yield")
+    else:
+        recommendations.append("🟢 Maintain current practices for optimal results")
+    
+    if crop_data:
+        if crop_data.get('water_need') == 'High' and rainfall < 800:
+            recommendations.append("💧 This crop needs high water. Ensure adequate irrigation.")
+        
+        optimal_ph = crop_data.get('optimal_ph', (6.0, 7.0))
+        if ph < optimal_ph[0]:
+            recommendations.append("🧪 Soil is too acidic. Consider lime application.")
+        elif ph > optimal_ph[1]:
+            recommendations.append("🧪 Soil is too alkaline. Consider sulfur or organic matter.")
+    
+    recommendations.append("📅 Schedule a call with our agricultural expert for personalized advice")
+    
+    return recommendations
+
+
+@yield_bp.route('/predict', methods=['POST'])
+def predict():
+    """Predict crop yield based on inputs"""
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'success': False, 'error': 'Request data required'}), 400
+    
+    # Required fields
+    crop = data.get('crop')
+    state = data.get('state')
+    
+    if not crop or not state:
+        return jsonify({'success': False, 'error': 'Crop and state are required'}), 400
+    
+    # Get parameters with defaults
+    n = float(data.get('nitrogen', 80))
+    p = float(data.get('phosphorus', 40))
+    k = float(data.get('potassium', 40))
+    ph = float(data.get('ph', 6.5))
+    rainfall = float(data.get('rainfall', 800))
+    area = float(data.get('area', 1))
+    
+    # Try to get live weather data
+    live_weather = get_live_weather(state)
+    weather_source = 'live' if live_weather else 'user_input'
+    
+    if live_weather and data.get('use_live_weather', True):
+        temperature = live_weather['temperature']
+        humidity = live_weather['humidity']
+    else:
+        temperature = float(data.get('temperature', 25))
+        humidity = float(data.get('humidity', 70))
+    
+    result, error = predict_yield(crop, state, n, p, k, ph, rainfall, temperature, humidity, area)
+    
+    if error:
+        return jsonify({'success': False, 'error': error}), 400
+    
+    response_data = {
+        'success': True,
+        'prediction': result,
+        'inputs': {
+            'crop': crop,
+            'state': state,
+            'area': area,
+            'soil': {'n': n, 'p': p, 'k': k, 'ph': ph},
+            'weather': {'rainfall': rainfall, 'temperature': temperature, 'humidity': humidity}
+        },
+        'weather_source': weather_source
+    }
+    
+    if live_weather:
+        response_data['live_weather'] = live_weather
+    
+    return jsonify(response_data), 200
+
+
+@yield_bp.route('/weather/<state>', methods=['GET'])
+def get_state_weather(state):
+    """Get live weather for a state"""
+    weather = get_live_weather(state)
+    if weather:
+        return jsonify({'success': True, 'weather': weather})
+    return jsonify({'success': False, 'error': 'Weather data not available'}), 404
+
+
+@yield_bp.route('/crops', methods=['GET'])
+def get_crops():
+    """Get list of supported crops"""
+    crops = []
+    for crop, data in CROP_YIELD_DATA.items():
+        crops.append({
+            'name': crop.title(),
+            'value': crop,
+            'avg_yield': data['avg_yield'],
+            'water_need': data['water_need'],
+            'unit': 'kg/hectare'
+        })
+    
+    return jsonify({
+        'success': True,
+        'crops': crops,
+        'total': len(crops)
+    }), 200
+
+
+@yield_bp.route('/states', methods=['GET'])
+def get_states():
+    """Get list of Indian states"""
+    states = list(STATE_FACTORS.keys())
+    return jsonify({
+        'success': True,
+        'states': states
+    }), 200

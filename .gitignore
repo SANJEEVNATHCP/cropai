@@ -1,0 +1,33 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Environment files
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Database
+*.db
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Distribution
+dist/
+build/
+*.egg-info/

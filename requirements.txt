@@ -1,0 +1,20 @@
+# Flask and extensions
+Flask==2.3.3
+flask-cors==4.0.0
+Flask-SQLAlchemy==3.0.5
+Werkzeug==2.3.7
+
+# Authentication
+PyJWT==2.8.0
+
+# Environment variables
+python-dotenv==1.0.0
+
+# LiveKit for video calls
+livekit-api==0.4.0
+
+# Production server
+gunicorn==23.0.0
+
+# Database (optional - for PostgreSQL on Railway)
+psycopg2-binary==2.9.9

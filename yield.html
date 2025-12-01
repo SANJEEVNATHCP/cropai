@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yield Prediction - CropYield AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#16a34a',
+                        secondary: '#15803d',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #166534 0%, #15803d 50%, #16a34a 100%); }
+        .glass { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
+        .mobile-menu { display: none; }
+        .mobile-menu.active { display: block; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/" class="flex items-center space-x-2">
+                <span class="text-3xl">🌾</span>
+                <h1 class="text-2xl font-bold">CropYield<span class="text-yellow-300">AI</span></h1>
+            </a>
+            <nav class="hidden md:flex space-x-6">
+                <a href="/" class="hover:text-yellow-300 transition">Home</a>
+                <a href="/yield" class="text-yellow-300 font-semibold">Yield Prediction</a>
+                <a href="/recommendation" class="hover:text-yellow-300 transition">Crop Recommendation</a>
+                <a href="/voice-agent" class="hover:text-yellow-300 transition">AI Voice Agent</a>
+            </nav>
+            <!-- Mobile Menu Button -->
+            <button onclick="toggleMobileMenu()" class="md:hidden text-white p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="mobile-menu md:hidden bg-green-800 px-4 py-3">
+            <nav class="flex flex-col space-y-3">
+                <a href="/" class="text-white hover:text-yellow-300 py-2">🏠 Home</a>
+                <a href="/yield" class="text-yellow-300 font-semibold py-2">📊 Yield Prediction</a>
+                <a href="/recommendation" class="text-white hover:text-yellow-300 py-2">🌱 Crop Recommendation</a>
+                <a href="/voice-agent" class="text-white hover:text-yellow-300 py-2">🎙️ AI Voice Agent</a>
+                <a href="/weather" class="text-white hover:text-yellow-300 py-2">🌤️ Weather</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Page Title -->
+    <section class="gradient-bg text-white py-8 md:py-12">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-2xl md:text-4xl font-bold mb-2 md:mb-4">📊 Crop Yield Prediction</h2>
+            <p class="text-base md:text-xl text-green-100">Predict your crop yields with AI</p>
+        </div>
+    </section>
+
+    <main class="container mx-auto px-3 md:px-4 py-4 md:py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
+            
+            <!-- Left: Prediction Form -->
+            <div class="lg:col-span-1 order-1">
+                <div class="bg-white rounded-2xl shadow-xl p-4 md:p-6 lg:sticky lg:top-24">
+                    <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6">🔮 New Prediction</h3>
+                    
+                    <form id="yieldForm" class="space-y-3 md:space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1 md:mb-2">Crop *</label>
+                            <select id="yieldCrop" required class="w-full px-3 md:px-4 py-3 md:py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-base">
+                                <option value="">Select Crop</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1 md:mb-2">State *</label>
+                            <select id="yieldState" required class="w-full px-3 md:px-4 py-3 md:py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-base">
+                                <option value="">Select State</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Live Weather Display -->
+                        <div id="liveWeatherBox" class="hidden bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-semibold text-blue-800">🌤️ Live Weather</span>
+                                <span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">LIVE</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-blue-600" id="liveTemp">--°C</div>
+                                    <div class="text-xs text-gray-500">Temperature</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-cyan-600" id="liveHumidity">--%</div>
+                                    <div class="text-xs text-gray-500">Humidity</div>
+                                </div>
+                            </div>
+                            <div class="text-center mt-2">
+                                <span class="text-sm text-gray-600" id="liveCondition">--</span>
+                                <span class="text-xs text-gray-400 block" id="liveCity">--</span>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Season</label>
+                                <select id="yieldSeason" class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500">
+                                    <option value="Kharif">Kharif</option>
+                                    <option value="Rabi">Rabi</option>
+                                    <option value="Zaid">Zaid</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Area (Acre)</label>
+                                <input type="number" id="yieldArea" value="1" min="0.1" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500">
+                            </div>
+                        </div>
+
+                        <div class="border-t pt-4 mt-4">
+                            <h4 class="text-sm font-semibold text-gray-800 mb-3">🌱 Soil Condition</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">How is your soil fertility?</label>
+                                    <select id="soilFertility" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                        <option value="high">🟢 Good (Rich, dark soil, crops grow well)</option>
+                                        <option value="medium" selected>🟡 Average (Normal growth)</option>
+                                        <option value="low">🔴 Poor (Light colored, weak crop growth)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Soil Type</label>
+                                    <select id="soilType" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                        <option value="loamy">Loamy (Best for most crops)</option>
+                                        <option value="clay">Clay (Heavy, holds water)</option>
+                                        <option value="sandy">Sandy (Light, drains fast)</option>
+                                        <option value="black">Black Soil (Cotton belt)</option>
+                                        <option value="red">Red Soil</option>
+                                        <option value="alluvial">Alluvial (River areas)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Hidden fields for API compatibility -->
+                            <input type="hidden" id="nitrogen" value="80">
+                            <input type="hidden" id="phosphorus" value="40">
+                            <input type="hidden" id="potassium" value="40">
+                            <input type="hidden" id="ph" value="6.5">
+                        </div>
+
+                        <div class="border-t pt-4">
+                            <h4 class="text-sm font-semibold text-gray-800 mb-3">💧 Water & Weather</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Irrigation Available?</label>
+                                    <select id="irrigationType" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                        <option value="good">🟢 Yes, reliable irrigation</option>
+                                        <option value="partial">🟡 Partial / Seasonal</option>
+                                        <option value="rainfed">🔴 No, rain-dependent only</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Expected Rainfall</label>
+                                    <select id="rainfallLevel" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                        <option value="high">🌧️ Heavy (Above 1000mm)</option>
+                                        <option value="normal" selected>🌦️ Normal (600-1000mm)</option>
+                                        <option value="low">☀️ Low (Below 600mm)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Hidden fields for API compatibility -->
+                            <input type="hidden" id="rainfall" value="800">
+                            <input type="hidden" id="temperature" value="25">
+                            <input type="hidden" id="humidity" value="70">
+                        </div>
+
+                        <button type="submit" class="w-full py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700 transition mt-4">
+                            🔮 Predict Yield
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right: Dashboard -->
+            <div class="lg:col-span-2 space-y-4 md:space-y-6 order-2">
+                
+                <!-- Latest Prediction Result -->
+                <div id="predictionResult" class="bg-white rounded-2xl shadow-xl p-4 md:p-6">
+                    <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">📈 Prediction Result</h3>
+                    <div class="text-center py-8 md:py-12 text-gray-400">
+                        <span class="text-5xl md:text-6xl block mb-3 md:mb-4">🌾</span>
+                        <p class="text-sm md:text-base">Fill the form and click "Predict Yield" to see results</p>
+                    </div>
+                </div>
+
+                <!-- Dashboard Stats -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                    <div class="bg-white rounded-xl shadow-lg p-3 md:p-5 text-center">
+                        <div class="text-2xl md:text-3xl font-bold text-green-600" id="totalPredictions">0</div>
+                        <div class="text-xs md:text-sm text-gray-500">Predictions</div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-lg p-3 md:p-5 text-center">
+                        <div class="text-2xl md:text-3xl font-bold text-blue-600" id="avgYield">0</div>
+                        <div class="text-xs md:text-sm text-gray-500">Avg Yield</div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-lg p-3 md:p-5 text-center">
+                        <div class="text-2xl md:text-3xl font-bold text-purple-600" id="topCrop">-</div>
+                        <div class="text-xs md:text-sm text-gray-500">Top Crop</div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-lg p-3 md:p-5 text-center">
+                        <div class="text-2xl md:text-3xl font-bold text-orange-600" id="avgConfidence">0%</div>
+                        <div class="text-xs md:text-sm text-gray-500">Confidence</div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <div class="bg-white rounded-2xl shadow-xl p-4 md:p-6">
+                        <h4 class="text-base md:text-lg font-bold text-gray-800 mb-3 md:mb-4">📊 Yield by Crop</h4>
+                        <canvas id="yieldByCropChart" height="200"></canvas>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-xl p-4 md:p-6">
+                        <h4 class="text-lg font-bold text-gray-800 mb-4">📈 Prediction History</h4>
+                        <canvas id="historyChart" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Prediction History Table -->
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">📋 Prediction History</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Date</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Crop</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-600">State</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Area</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Yield (kg/ha)</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Category</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTable" class="divide-y divide-gray-100">
+                                <tr>
+                                    <td colspan="6" class="px-4 py-8 text-center text-gray-400">No predictions yet</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="gradient-bg text-white py-6 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p>🌾 CropYield AI - Empowering Farmers with AI | © 2025</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_BASE_URL = window.location.origin;
+        let predictionHistory = JSON.parse(localStorage.getItem('yieldHistory') || '[]');
+        let yieldByCropChart, historyChart;
+
+        // Indian states list (fallback)
+        const STATES = ['Punjab', 'Haryana', 'Uttar Pradesh', 'West Bengal', 'Andhra Pradesh', 'Tamil Nadu', 'Karnataka', 'Maharashtra', 'Madhya Pradesh', 'Gujarat', 'Rajasthan', 'Bihar', 'Odisha', 'Assam', 'Jharkhand', 'Chhattisgarh', 'Kerala', 'Telangana'];
+        
+        // Crops list (fallback)
+        const CROPS = [
+            {name: 'Rice', value: 'rice'},
+            {name: 'Wheat', value: 'wheat'},
+            {name: 'Maize', value: 'maize'},
+            {name: 'Cotton', value: 'cotton'},
+            {name: 'Sugarcane', value: 'sugarcane'},
+            {name: 'Soybean', value: 'soybean'},
+            {name: 'Groundnut', value: 'groundnut'},
+            {name: 'Potato', value: 'potato'},
+            {name: 'Tomato', value: 'tomato'},
+            {name: 'Onion', value: 'onion'},
+            {name: 'Mustard', value: 'mustard'},
+            {name: 'Chickpea', value: 'chickpea'},
+            {name: 'Bajra', value: 'bajra'},
+            {name: 'Jowar', value: 'jowar'}
+        ];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCrops();
+            loadStates();
+            initCharts();
+            updateDashboard();
+            document.getElementById('yieldForm').onsubmit = handlePrediction;
+            document.getElementById('yieldState').onchange = fetchLiveWeather;
+        });
+
+        async function fetchLiveWeather() {
+            const state = document.getElementById('yieldState').value;
+            const weatherBox = document.getElementById('liveWeatherBox');
+            
+            if (!state) {
+                weatherBox.classList.add('hidden');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/yield/weather/${encodeURIComponent(state)}`);
+                const data = await response.json();
+                
+                if (data.success && data.weather) {
+                    const w = data.weather;
+                    document.getElementById('liveTemp').textContent = `${Math.round(w.temperature)}°C`;
+                    document.getElementById('liveHumidity').textContent = `${w.humidity}%`;
+                    document.getElementById('liveCondition').textContent = w.description;
+                    document.getElementById('liveCity').textContent = `📍 ${w.city}`;
+                    weatherBox.classList.remove('hidden');
+                } else {
+                    weatherBox.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Weather fetch error:', error);
+                weatherBox.classList.add('hidden');
+            }
+        }
+
+        async function loadCrops() {
+            const select = document.getElementById('yieldCrop');
+            // Always add fallback crops first to ensure dropdown works
+            CROPS.forEach(crop => {
+                const option = document.createElement('option');
+                option.value = crop.value;
+                option.textContent = crop.name;
+                select.appendChild(option);
+            });
+        }
+
+        async function loadStates() {
+            const select = document.getElementById('yieldState');
+            // Always add fallback states first to ensure dropdown works
+            STATES.forEach(state => {
+                const option = document.createElement('option');
+                option.value = state;
+                option.textContent = state;
+                select.appendChild(option);
+            });
+        }
+
+        function initCharts() {
+            // Yield by Crop Chart
+            const ctx1 = document.getElementById('yieldByCropChart').getContext('2d');
+            yieldByCropChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Avg Yield (kg/ha)',
+                        data: [],
+                        backgroundColor: 'rgba(22, 163, 74, 0.7)',
+                        borderColor: 'rgba(22, 163, 74, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // History Chart
+            const ctx2 = document.getElementById('historyChart').getContext('2d');
+            historyChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Yield (kg/ha)',
+                        data: [],
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        async function handlePrediction(e) {
+            e.preventDefault();
+            
+            const resultDiv = document.getElementById('predictionResult');
+            resultDiv.innerHTML = `
+                <h3 class="text-xl font-bold text-gray-800 mb-4">📈 Prediction Result</h3>
+                <div class="flex items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-12 w-12 border-4 border-green-500 border-t-transparent"></div>
+                    <span class="ml-4 text-gray-600">Analyzing...</span>
+                </div>
+            `;
+
+            // Convert farmer-friendly options to technical values
+            const soilFertility = document.getElementById('soilFertility').value;
+            const soilType = document.getElementById('soilType').value;
+            const irrigationType = document.getElementById('irrigationType').value;
+            const rainfallLevel = document.getElementById('rainfallLevel').value;
+
+            // Map soil fertility to NPK values
+            const fertilityMap = {
+                'high': { n: 120, p: 60, k: 50, ph: 6.8 },
+                'medium': { n: 80, p: 40, k: 40, ph: 6.5 },
+                'low': { n: 40, p: 20, k: 20, ph: 6.0 }
+            };
+
+            // Map soil type to pH adjustment
+            const soilPhMap = {
+                'loamy': 0, 'clay': 0.2, 'sandy': -0.3,
+                'black': 0.3, 'red': -0.2, 'alluvial': 0.1
+            };
+
+            // Map rainfall level
+            const rainfallMap = {
+                'high': 1200, 'normal': 800, 'low': 400
+            };
+
+            // Map irrigation to humidity
+            const irrigationMap = {
+                'good': { humidity: 75, tempAdj: 0 },
+                'partial': { humidity: 65, tempAdj: 2 },
+                'rainfed': { humidity: 55, tempAdj: 3 }
+            };
+
+            const fertility = fertilityMap[soilFertility];
+            const phAdjust = soilPhMap[soilType] || 0;
+            const rainfall = rainfallMap[rainfallLevel];
+            const irrigation = irrigationMap[irrigationType];
+
+            const formData = {
+                crop: document.getElementById('yieldCrop').value,
+                state: document.getElementById('yieldState').value,
+                season: document.getElementById('yieldSeason').value,
+                area: parseFloat(document.getElementById('yieldArea').value),
+                nitrogen: fertility.n,
+                phosphorus: fertility.p,
+                potassium: fertility.k,
+                ph: fertility.ph + phAdjust,
+                rainfall: rainfall,
+                temperature: 25 + irrigation.tempAdj,
+                humidity: irrigation.humidity
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/yield/predict`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const p = result.prediction;
+                    const categoryColor = p.category === 'Excellent' ? 'bg-green-500' : p.category === 'Good' ? 'bg-blue-500' : p.category === 'Average' ? 'bg-yellow-500' : 'bg-red-500';
+                    
+                    // Weather source badge
+                    const weatherBadge = result.weather_source === 'live' 
+                        ? '<span class="ml-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">LIVE WEATHER</span>'
+                        : '';
+                    
+                    // Live weather info
+                    const liveWeatherInfo = result.live_weather 
+                        ? `<div class="mt-4 bg-blue-50 rounded-lg p-3 flex items-center justify-between">
+                            <span class="text-sm text-blue-800">🌤️ Using live weather from ${result.live_weather.city}</span>
+                            <span class="text-sm font-bold text-blue-600">${Math.round(result.live_weather.temperature)}°C | ${result.live_weather.humidity}% humidity</span>
+                           </div>`
+                        : '';
+
+                    // Save to history
+                    predictionHistory.unshift({
+                        date: new Date().toLocaleDateString(),
+                        crop: formData.crop,
+                        state: formData.state,
+                        area: formData.area,
+                        yield: p.predicted_yield,
+                        category: p.category,
+                        confidence: p.confidence
+                    });
+                    if (predictionHistory.length > 20) predictionHistory.pop();
+                    localStorage.setItem('yieldHistory', JSON.stringify(predictionHistory));
+
+                    resultDiv.innerHTML = `
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">📈 Prediction Result ${weatherBadge}</h3>
+                        <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6">
+                            <div class="flex justify-between items-start mb-6">
+                                <div>
+                                    <p class="text-5xl font-bold text-green-600">${p.predicted_yield.toLocaleString()}</p>
+                                    <p class="text-gray-500">kg/ha predicted yield</p>
+                                </div>
+                                <span class="px-4 py-2 ${categoryColor} text-white rounded-full font-semibold">${p.category}</span>
+                            </div>
+                            ${liveWeatherInfo}
+                            
+                            <div class="grid grid-cols-4 gap-4 mb-6 mt-4">
+                                <div class="bg-white rounded-lg p-4 text-center shadow">
+                                    <p class="text-2xl font-bold text-gray-800">${p.total_yield.toLocaleString()}</p>
+                                    <p class="text-xs text-gray-500">Total (kg)</p>
+                                </div>
+                                <div class="bg-white rounded-lg p-4 text-center shadow">
+                                    <p class="text-2xl font-bold text-blue-600">${p.confidence}%</p>
+                                    <p class="text-xs text-gray-500">Confidence</p>
+                                </div>
+                                <div class="bg-white rounded-lg p-4 text-center shadow">
+                                    <p class="text-2xl font-bold text-purple-600">${p.factors.soil_factor}</p>
+                                    <p class="text-xs text-gray-500">Soil Factor</p>
+                                </div>
+                                <div class="bg-white rounded-lg p-4 text-center shadow">
+                                    <p class="text-2xl font-bold text-orange-600">${p.factors.weather_factor}</p>
+                                    <p class="text-xs text-gray-500">Weather Factor</p>
+                                </div>
+                            </div>
+
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div class="bg-white rounded-lg p-4 shadow">
+                                    <h4 class="font-semibold text-gray-800 mb-2">💡 Insights</h4>
+                                    <ul class="space-y-1 text-sm">
+                                        ${p.insights.map(i => `<li class="text-gray-600 flex items-start"><span class="text-green-500 mr-2">✓</span>${i}</li>`).join('')}
+                                    </ul>
+                                </div>
+                                <div class="bg-white rounded-lg p-4 shadow">
+                                    <h4 class="font-semibold text-gray-800 mb-2">📋 Recommendations</h4>
+                                    <ul class="space-y-1 text-sm">
+                                        ${p.recommendations.map(r => `<li class="text-gray-600 flex items-start"><span class="text-blue-500 mr-2">→</span>${r}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    updateDashboard();
+                } else {
+                    resultDiv.innerHTML = `
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">📈 Prediction Result</h3>
+                        <div class="bg-red-50 text-red-600 p-6 rounded-xl">Error: ${result.error}</div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">📈 Prediction Result</h3>
+                    <div class="bg-red-50 text-red-600 p-6 rounded-xl">Error connecting to server</div>
+                `;
+            }
+        }
+
+        function updateDashboard() {
+            // Update stats
+            document.getElementById('totalPredictions').textContent = predictionHistory.length;
+            
+            if (predictionHistory.length > 0) {
+                const avgYield = Math.round(predictionHistory.reduce((a, b) => a + b.yield, 0) / predictionHistory.length);
+                const avgConf = Math.round(predictionHistory.reduce((a, b) => a + b.confidence, 0) / predictionHistory.length);
+                
+                // Find top crop
+                const cropCounts = {};
+                predictionHistory.forEach(p => cropCounts[p.crop] = (cropCounts[p.crop] || 0) + 1);
+                const topCrop = Object.keys(cropCounts).reduce((a, b) => cropCounts[a] > cropCounts[b] ? a : b, '');
+                
+                document.getElementById('avgYield').textContent = avgYield.toLocaleString();
+                document.getElementById('topCrop').textContent = topCrop;
+                document.getElementById('avgConfidence').textContent = avgConf + '%';
+
+                // Update charts
+                const cropYields = {};
+                predictionHistory.forEach(p => {
+                    if (!cropYields[p.crop]) cropYields[p.crop] = [];
+                    cropYields[p.crop].push(p.yield);
+                });
+                
+                yieldByCropChart.data.labels = Object.keys(cropYields);
+                yieldByCropChart.data.datasets[0].data = Object.values(cropYields).map(arr => Math.round(arr.reduce((a,b) => a+b, 0) / arr.length));
+                yieldByCropChart.update();
+
+                historyChart.data.labels = predictionHistory.slice(0, 10).map(p => p.date).reverse();
+                historyChart.data.datasets[0].data = predictionHistory.slice(0, 10).map(p => p.yield).reverse();
+                historyChart.update();
+
+                // Update table
+                const tbody = document.getElementById('historyTable');
+                tbody.innerHTML = predictionHistory.slice(0, 10).map(p => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3">${p.date}</td>
+                        <td class="px-4 py-3 font-medium">${p.crop}</td>
+                        <td class="px-4 py-3">${p.state}</td>
+                        <td class="px-4 py-3">${p.area} ha</td>
+                        <td class="px-4 py-3 font-bold text-green-600">${p.yield.toLocaleString()}</td>
+                        <td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded-full ${p.category === 'Excellent' ? 'bg-green-100 text-green-800' : p.category === 'Good' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}">${p.category}</span></td>
+                    </tr>
+                `).join('');
+            }
+        }
+        
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('active');
+        }
+    </script>
+</body>
+</html>

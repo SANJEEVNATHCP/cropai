@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Weather - CropYield AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#16a34a',
+                        secondary: '#15803d',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%); }
+        .weather-card { backdrop-filter: blur(10px); background: rgba(255,255,255,0.95); }
+        .mobile-menu { display: none; }
+        .mobile-menu.active { display: block; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <a href="/" class="flex items-center space-x-2">
+                    <span class="text-3xl">🌾</span>
+                    <h1 class="text-2xl font-bold">CropYield<span class="text-yellow-300">AI</span></h1>
+                </a>
+            </div>
+            <nav class="hidden md:flex space-x-6">
+                <a href="/yield" class="hover:text-yellow-300 transition">Yield Prediction</a>
+                <a href="/recommendation" class="hover:text-yellow-300 transition">Crop Recommendation</a>
+                <a href="/weather" class="text-yellow-300 font-semibold">Weather</a>
+                <a href="/voice-agent" class="hover:text-yellow-300 transition">AI Assistant</a>
+            </nav>
+            <!-- Mobile Menu Button -->
+            <button onclick="toggleMobileMenu()" class="md:hidden text-white p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="mobile-menu md:hidden bg-sky-800 px-4 py-3">
+            <nav class="flex flex-col space-y-3">
+                <a href="/" class="text-white hover:text-yellow-300 py-2">🏠 Home</a>
+                <a href="/yield" class="text-white hover:text-yellow-300 py-2">📊 Yield Prediction</a>
+                <a href="/recommendation" class="text-white hover:text-yellow-300 py-2">🌱 Crop Recommendation</a>
+                <a href="/weather" class="text-yellow-300 font-semibold py-2">🌤️ Weather</a>
+                <a href="/voice-agent" class="text-white hover:text-yellow-300 py-2">🎙️ AI Voice Agent</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="gradient-bg text-white py-6 md:py-12">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-2xl md:text-4xl font-bold mb-2 md:mb-4">🌤️ Real-Time Weather</h2>
+            <p class="text-sm md:text-xl text-blue-100">Live weather updates for your region</p>
+        </div>
+    </section>
+
+    <main class="container mx-auto px-3 md:px-4 py-4 md:py-8">
+        <!-- City Selector -->
+        <div class="mb-4 md:mb-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 md:gap-4">
+            <select id="citySelect" class="px-4 md:px-6 py-3 border-2 border-blue-500 rounded-xl text-base md:text-lg font-medium focus:ring-2 focus:ring-blue-400 w-full sm:w-auto">
+                <option value="Delhi">Delhi</option>
+            </select>
+            <button onclick="loadWeather()" class="px-4 md:px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition">
+                🔄 Refresh
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            <!-- Current Weather Card -->
+            <div class="lg:col-span-2">
+                <div id="currentWeather" class="weather-card rounded-xl md:rounded-2xl shadow-xl p-4 md:p-8">
+                    <div class="text-center py-8 md:py-12 text-gray-400">
+                        <div class="animate-spin rounded-full h-10 w-10 md:h-12 md:w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+                        <p class="text-sm md:text-base">Loading weather...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Panel -->
+            <div>
+                <div id="weatherAlerts" class="weather-card rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6">
+                    <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">⚠️ Alerts</h3>
+                    <div class="text-center py-6 md:py-8 text-gray-400">
+                        <p class="text-sm md:text-base">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Farming Advice -->
+        <div id="farmingAdvice" class="mt-4 md:mt-6 weather-card rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6">
+            <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">🌾 Farming Advice</h3>
+            <div class="text-center py-6 md:py-8 text-gray-400">
+                <p class="text-sm md:text-base">Loading...</p>
+            </div>
+        </div>
+
+        <!-- 7-Day Forecast -->
+        <div id="forecast" class="mt-6 weather-card rounded-2xl shadow-xl p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">📅 7-Day Forecast</h3>
+            <div class="text-center py-8 text-gray-400">
+                <p>Loading forecast...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="gradient-bg text-white py-6 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p>🌾 CropYield AI - Real-Time Weather for Smart Farming | © 2025</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_BASE = window.location.origin;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCities();
+            loadWeather();
+        });
+
+        async function loadCities() {
+            try {
+                const response = await fetch(`${API_BASE}/api/weather/cities`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('citySelect');
+                    select.innerHTML = '';
+                    data.cities.forEach(city => {
+                        const option = document.createElement('option');
+                        option.value = city.name;
+                        option.textContent = `${city.name}, ${city.state}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading cities:', error);
+            }
+        }
+
+        async function loadWeather() {
+            const city = document.getElementById('citySelect').value;
+            
+            // Load all weather data
+            await Promise.all([
+                loadCurrentWeather(city),
+                loadAlerts(city),
+                loadForecast(city)
+            ]);
+        }
+
+        async function loadCurrentWeather(city) {
+            const container = document.getElementById('currentWeather');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/weather/current?city=${city}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const w = data.weather;
+                    container.innerHTML = `
+                        <div class="flex flex-col md:flex-row items-center justify-between">
+                            <div class="text-center md:text-left mb-6 md:mb-0">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="text-6xl">${w.icon}</span>
+                                    <div>
+                                        <h2 class="text-3xl font-bold text-gray-800">${data.city}, ${data.state}</h2>
+                                        <p class="text-gray-500 capitalize">${w.description}</p>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-gray-400 mt-2">Updated: ${data.updated_at} | Source: ${data.source}</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-7xl font-bold text-blue-600">${w.temperature}°C</div>
+                                <p class="text-gray-500">Feels like ${w.feels_like}°C</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+                            <div class="bg-blue-50 rounded-xl p-4 text-center">
+                                <div class="text-3xl mb-2">💧</div>
+                                <div class="text-2xl font-bold text-blue-600">${w.humidity}%</div>
+                                <div class="text-sm text-gray-500">Humidity</div>
+                            </div>
+                            <div class="bg-green-50 rounded-xl p-4 text-center">
+                                <div class="text-3xl mb-2">💨</div>
+                                <div class="text-2xl font-bold text-green-600">${w.wind_speed} km/h</div>
+                                <div class="text-sm text-gray-500">Wind Speed</div>
+                            </div>
+                            <div class="bg-purple-50 rounded-xl p-4 text-center">
+                                <div class="text-3xl mb-2">🌧️</div>
+                                <div class="text-2xl font-bold text-purple-600">${w.rain_chance || 0}%</div>
+                                <div class="text-sm text-gray-500">Rain Chance</div>
+                            </div>
+                            <div class="bg-orange-50 rounded-xl p-4 text-center">
+                                <div class="text-3xl mb-2">👁️</div>
+                                <div class="text-2xl font-bold text-orange-600">${w.visibility} km</div>
+                                <div class="text-sm text-gray-500">Visibility</div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Update farming advice
+                    updateFarmingAdvice(data.farming_advice);
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="text-red-500 text-center py-8">Error loading weather data</div>`;
+            }
+        }
+
+        function updateFarmingAdvice(advice) {
+            const container = document.getElementById('farmingAdvice');
+            
+            if (!advice || advice.length === 0) {
+                container.innerHTML = `
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">🌾 Today's Farming Advice</h3>
+                    <p class="text-gray-500">No specific advice for current conditions.</p>
+                `;
+                return;
+            }
+            
+            const typeColors = {
+                'success': 'bg-green-100 border-green-500 text-green-800',
+                'warning': 'bg-yellow-100 border-yellow-500 text-yellow-800',
+                'danger': 'bg-red-100 border-red-500 text-red-800',
+                'info': 'bg-blue-100 border-blue-500 text-blue-800',
+            };
+            
+            container.innerHTML = `
+                <h3 class="text-xl font-bold text-gray-800 mb-4">🌾 Today's Farming Advice</h3>
+                <div class="grid md:grid-cols-2 gap-4">
+                    ${advice.map(item => `
+                        <div class="border-l-4 ${typeColors[item.type] || typeColors['info']} p-4 rounded-r-lg">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-2xl">${item.icon}</span>
+                                <span class="font-bold">${item.title}</span>
+                            </div>
+                            <p class="text-sm">${item.message}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        async function loadAlerts(city) {
+            const container = document.getElementById('weatherAlerts');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/weather/alerts?city=${city}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const severityColors = {
+                        'danger': 'bg-red-100 border-red-500',
+                        'warning': 'bg-yellow-100 border-yellow-500',
+                        'info': 'bg-blue-100 border-blue-500',
+                        'success': 'bg-green-100 border-green-500',
+                    };
+                    
+                    container.innerHTML = `
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">⚠️ Weather Alerts</h3>
+                        <div class="space-y-3">
+                            ${data.alerts.map(alert => `
+                                <div class="border-l-4 ${severityColors[alert.severity]} p-3 rounded-r-lg">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xl">${alert.icon}</span>
+                                        <span class="font-semibold text-sm">${alert.title}</span>
+                                    </div>
+                                    <p class="text-xs mt-1 text-gray-600">${alert.message}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="mt-4 pt-4 border-t">
+                            <p class="text-sm text-gray-500">
+                                <strong>Now:</strong> ${data.current.temp}°C, ${data.current.condition}
+                            </p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="text-red-500">Error loading alerts</div>`;
+            }
+        }
+
+        async function loadForecast(city) {
+            const container = document.getElementById('forecast');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/weather/forecast?city=${city}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    container.innerHTML = `
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">📅 7-Day Forecast</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-7 gap-3">
+                            ${data.forecast.map((day, i) => `
+                                <div class="bg-gradient-to-b ${i === 0 ? 'from-blue-100 to-blue-50 border-2 border-blue-300' : 'from-gray-50 to-white'} rounded-xl p-4 text-center">
+                                    <div class="font-bold text-gray-700">${i === 0 ? 'Today' : day.day_short}</div>
+                                    <div class="text-4xl my-3">${day.icon}</div>
+                                    <div class="text-sm text-gray-600">${day.condition}</div>
+                                    <div class="mt-2">
+                                        <span class="font-bold text-blue-600">${day.temp_max}°</span>
+                                        <span class="text-gray-400">/</span>
+                                        <span class="text-gray-500">${day.temp_min}°</span>
+                                    </div>
+                                    <div class="text-xs text-blue-500 mt-1">🌧️ ${day.rain_chance}%</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="text-red-500 text-center py-8">Error loading forecast</div>`;
+            }
+        }
+
+        // Auto-refresh every 5 minutes
+        setInterval(() => loadWeather(), 5 * 60 * 1000);
+        
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('active');
+        }
+    </script>
+</body>
+</html>

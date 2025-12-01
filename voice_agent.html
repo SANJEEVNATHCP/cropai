@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Agent - CropYield AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#16a34a',
+                        secondary: '#15803d',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #166534 0%, #15803d 50%, #16a34a 100%); }
+        .glass { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
+        
+        /* Voice wave animation */
+        .voice-wave {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 60px;
+        }
+        .voice-wave span {
+            width: 6px;
+            background: linear-gradient(to top, #16a34a, #22c55e);
+            border-radius: 3px;
+            animation: wave 1s ease-in-out infinite;
+        }
+        .voice-wave span:nth-child(1) { animation-delay: 0s; height: 20px; }
+        .voice-wave span:nth-child(2) { animation-delay: 0.1s; height: 35px; }
+        .voice-wave span:nth-child(3) { animation-delay: 0.2s; height: 50px; }
+        .voice-wave span:nth-child(4) { animation-delay: 0.3s; height: 35px; }
+        .voice-wave span:nth-child(5) { animation-delay: 0.4s; height: 20px; }
+        
+        @keyframes wave {
+            0%, 100% { transform: scaleY(0.5); }
+            50% { transform: scaleY(1); }
+        }
+        
+        .voice-wave.inactive span {
+            animation: none;
+            height: 6px !important;
+        }
+        
+        /* Pulse animation */
+        .pulse-ring {
+            animation: pulse-ring 1.5s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+        
+        /* Typing animation */
+        .typing-dot {
+            animation: typing 1.4s infinite;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+        
+        /* Language selector styling */
+        .lang-option { transition: all 0.2s; }
+        .lang-option:hover { transform: scale(1.02); }
+        /* Mobile menu */
+        .mobile-menu { display: none; }
+        .mobile-menu.active { display: block; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/" class="flex items-center space-x-2">
+                <span class="text-3xl">🌾</span>
+                <h1 class="text-2xl font-bold">CropYield<span class="text-yellow-300">AI</span></h1>
+            </a>
+            <nav class="hidden md:flex space-x-6">
+                <a href="/" class="hover:text-yellow-300 transition">Home</a>
+                <a href="/yield" class="hover:text-yellow-300 transition">Yield Prediction</a>
+                <a href="/recommendation" class="hover:text-yellow-300 transition">Crop Recommendation</a>
+                <a href="/voice-agent" class="text-yellow-300 font-semibold">AI Voice Agent</a>
+            </nav>
+            
+            <!-- Mobile Menu Button -->
+            <button onclick="toggleMobileMenu()" class="md:hidden text-white p-2 order-last">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            
+            <!-- Language Selector in Header -->
+            <div class="relative">
+                <button id="langDropdownBtn" onclick="toggleLangDropdown()" class="flex items-center space-x-2 bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg transition">
+                    <span>🌐</span>
+                    <span id="currentLangName" class="hidden sm:inline">English</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="langDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl py-2 z-50 max-h-80 overflow-y-auto"></div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="mobile-menu md:hidden bg-green-800 px-4 py-3">
+            <nav class="flex flex-col space-y-3">
+                <a href="/" class="text-white hover:text-yellow-300 py-2">🏠 Home</a>
+                <a href="/yield" class="text-white hover:text-yellow-300 py-2">📊 Yield Prediction</a>
+                <a href="/recommendation" class="text-white hover:text-yellow-300 py-2">🌱 Crop Recommendation</a>
+                <a href="/voice-agent" class="text-yellow-300 font-semibold py-2">🎙️ AI Voice Agent</a>
+                <a href="/weather" class="text-white hover:text-yellow-300 py-2">🌤️ Weather</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Page Title -->
+    <section class="gradient-bg text-white py-6 md:py-12">
+        <div class="container mx-auto px-4 text-center">
+            <h2 id="pageTitle" class="text-xl md:text-4xl font-bold mb-2 md:mb-4">🎙️ AI Voice Agent</h2>
+            <p id="pageSubtitle" class="text-sm md:text-xl text-green-100">Talk to our AI expert for farming advice</p>
+        </div>
+    </section>
+
+    <main class="container mx-auto px-2 md:px-4 py-4 md:py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
+            
+            <!-- Left: Voice Agent Interface -->
+            <div class="lg:col-span-2 order-1">
+                <div class="bg-white rounded-xl md:rounded-2xl shadow-xl overflow-hidden">
+                    <!-- Agent Header -->
+                    <div class="bg-gradient-to-r from-green-600 to-green-500 p-3 md:p-6 text-white">
+                        <div class="flex items-center space-x-3 md:space-x-4">
+                            <div class="w-10 h-10 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center text-xl md:text-3xl">🤖</div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-base md:text-xl font-bold truncate">Krishi AI</h3>
+                                <p class="text-green-100 text-xs md:text-base truncate" id="agentStatus">Ready to help</p>
+                            </div>
+                            <div>
+                                <span id="connectionStatus" class="px-2 md:px-3 py-1 bg-green-400 rounded-full text-xs md:text-sm">🟢</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Container -->
+                    <div id="chatContainer" class="h-64 md:h-96 overflow-y-auto p-3 md:p-6 space-y-3 md:space-y-4 bg-gray-50"></div>
+
+                    <!-- Voice Input Section -->
+                    <div class="p-3 md:p-6 bg-white border-t">
+                        <div id="voiceWaveContainer" class="flex justify-center mb-3 md:mb-4 hidden">
+                            <div class="voice-wave" id="voiceWave"><span></span><span></span><span></span><span></span><span></span></div>
+                        </div>
+
+                        <div class="flex items-center space-x-2 md:space-x-4">
+                            <div class="flex-1 relative">
+                                <input type="text" id="userInput" placeholder="Type or speak..." 
+                                    class="w-full px-3 md:px-5 py-3 md:py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 pr-10 md:pr-12 text-sm md:text-base">
+                                <button onclick="sendMessage()" class="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 text-green-600 hover:text-green-700 p-1">
+                                    <svg class="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                                </button>
+                            </div>
+                            
+                            <button id="voiceBtn" onclick="toggleVoice()" 
+                                class="w-12 h-12 md:w-16 md:h-16 bg-green-600 hover:bg-green-700 text-white rounded-full flex items-center justify-center text-xl md:text-2xl shadow-lg transition relative flex-shrink-0">
+                                <span id="micIcon">🎤</span>
+                                <div id="pulseRing" class="absolute inset-0 border-4 border-green-400 rounded-full pulse-ring hidden"></div>
+                            </button>
+                        </div>
+                        
+                        <p id="voiceStatus" class="text-center text-xs md:text-sm text-gray-500 mt-2">Tap mic to speak</p>
+                    </div>
+                </div>
+
+                <!-- Quick Questions -->
+                <div class="bg-white rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6 mt-4 md:mt-6">
+                    <h4 id="quickQuestionsTitle" class="font-bold text-gray-800 mb-3 md:mb-4 text-sm md:text-base">💡 Quick Questions</h4>
+                    <div id="quickQuestionsContainer" class="flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+
+            <!-- Right: Info Panel -->
+            <div class="space-y-4 md:space-y-6 order-2">
+                <!-- Language Selection Card -->
+                <div class="bg-white rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6">
+                    <h3 id="selectLanguageTitle" class="text-base md:text-xl font-bold text-gray-800 mb-3 md:mb-4">🌐 Select Language</h3>
+                    <div id="languageGrid" class="grid grid-cols-3 md:grid-cols-2 gap-2"></div>
+                </div>
+                
+                <!-- Agent Info -->
+                <div class="bg-white rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6 hidden md:block">
+                    <h3 id="aboutTitle" class="text-base md:text-xl font-bold text-gray-800 mb-3 md:mb-4">🤖 About Krishi AI</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center space-x-3"><span class="text-2xl">🧠</span><div><p class="font-semibold text-gray-800">AI-Powered</p><p class="text-sm text-gray-500">Google Gemini AI</p></div></div>
+                        <div class="flex items-center space-x-3"><span class="text-2xl">🌍</span><div><p class="font-semibold text-gray-800">11 Languages</p><p class="text-sm text-gray-500">Hindi, Marathi, Telugu & more</p></div></div>
+                        <div class="flex items-center space-x-3"><span class="text-2xl">🎤</span><div><p class="font-semibold text-gray-800">Voice Enabled</p><p class="text-sm text-gray-500">Speak in your language</p></div></div>
+                    </div>
+                </div>
+
+                <!-- Topics -->
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 id="topicsTitle" class="text-xl font-bold text-gray-800 mb-4">📚 I Can Help With</h3>
+                    <div id="topicsContainer" class="space-y-2"></div>
+                </div>
+
+                <!-- Stats -->
+                <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-xl p-6 text-white">
+                    <h3 id="statsTitle" class="text-xl font-bold mb-4">📊 Session Stats</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center"><p class="text-3xl font-bold" id="questionsAsked">0</p><p id="questionsLabel" class="text-sm text-green-100">Questions Asked</p></div>
+                        <div class="text-center"><p class="text-3xl font-bold" id="sessionTime">0:00</p><p id="timeLabel" class="text-sm text-green-100">Session Time</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="gradient-bg text-white py-6 mt-12">
+        <div class="container mx-auto px-4 text-center"><p>🌾 CropYield AI - Empowering Farmers with AI | © 2025</p></div>
+    </footer>
+
+    <script>
+        const API_BASE_URL = window.location.origin;
+        let isListening = false, recognition, synthesis = window.speechSynthesis;
+        let questionsCount = 0, sessionStart = Date.now();
+        let currentLanguage = localStorage.getItem('preferredLanguage') || 'en';
+        let currentSpeechCode = 'en-IN', translations = {}, availableLanguages = [];
+
+        const quickQuestions = {
+            'en': [{ text: 'Best Kharif crops for my region', icon: '🌱', color: 'green' },{ text: 'How to improve soil fertility?', icon: '🧪', color: 'blue' },{ text: 'Rice disease prevention tips', icon: '🌾', color: 'orange' },{ text: 'Government farming schemes', icon: '💰', color: 'yellow' }],
+            'hi': [{ text: 'मेरे क्षेत्र के लिए खरीफ फसलें', icon: '🌱', color: 'green' },{ text: 'मिट्टी की उर्वरता कैसे बढ़ाएं?', icon: '🧪', color: 'blue' },{ text: 'धान की बीमारी से बचाव', icon: '🌾', color: 'orange' },{ text: 'सरकारी कृषि योजनाएं', icon: '💰', color: 'yellow' }],
+            'mr': [{ text: 'माझ्या भागासाठी खरीप पिके', icon: '🌱', color: 'green' },{ text: 'माती सुपीकता कशी वाढवावी?', icon: '🧪', color: 'blue' },{ text: 'भात रोग प्रतिबंध', icon: '🌾', color: 'orange' },{ text: 'सरकारी शेती योजना', icon: '💰', color: 'yellow' }],
+            'te': [{ text: 'నా ప్రాంతానికి ఖరీఫ్ పంటలు', icon: '🌱', color: 'green' },{ text: 'నేల సారాన్ని ఎలా పెంచాలి?', icon: '🧪', color: 'blue' },{ text: 'వరి వ్యాధి నివారణ', icon: '🌾', color: 'orange' },{ text: 'ప్రభుత్వ వ్యవసాయ పథకాలు', icon: '💰', color: 'yellow' }],
+            'ta': [{ text: 'என் பகுதிக்கு காரிஃப் பயிர்கள்', icon: '🌱', color: 'green' },{ text: 'மண் வளத்தை அதிகரிப்பது எப்படி?', icon: '🧪', color: 'blue' },{ text: 'நெல் நோய் தடுப்பு', icon: '🌾', color: 'orange' },{ text: 'அரசு விவசாய திட்டங்கள்', icon: '💰', color: 'yellow' }]
+        };
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadLanguages();
+            await changeLanguage(currentLanguage);
+            initSpeechRecognition();
+            addWelcomeMessage();
+            setInterval(() => {
+                const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+                document.getElementById('sessionTime').textContent = `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, '0')}`;
+            }, 1000);
+        });
+
+        async function loadLanguages() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/voice/languages`);
+                const data = await response.json();
+                if (data.success) { availableLanguages = data.languages; renderLanguageOptions(); }
+            } catch (e) {
+                availableLanguages = [{ code: 'en', name: 'English', native: 'English', speech_code: 'en-IN' },{ code: 'hi', name: 'Hindi', native: 'हिंदी', speech_code: 'hi-IN' }];
+                renderLanguageOptions();
+            }
+        }
+
+        function renderLanguageOptions() {
+            const grid = document.getElementById('languageGrid');
+            const dropdown = document.getElementById('langDropdown');
+            grid.innerHTML = ''; dropdown.innerHTML = '';
+            
+            availableLanguages.forEach(lang => {
+                const btn = document.createElement('button');
+                btn.className = `lang-option p-3 rounded-xl border-2 text-center ${lang.code === currentLanguage ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300'}`;
+                btn.onclick = () => changeLanguage(lang.code);
+                btn.innerHTML = `<p class="font-bold text-gray-800">${lang.native}</p><p class="text-xs text-gray-500">${lang.name}</p>`;
+                grid.appendChild(btn);
+                
+                const option = document.createElement('button');
+                option.className = `w-full px-4 py-2 text-left hover:bg-green-50 flex justify-between ${lang.code === currentLanguage ? 'bg-green-50 text-green-700' : 'text-gray-700'}`;
+                option.onclick = () => { changeLanguage(lang.code); toggleLangDropdown(); };
+                option.innerHTML = `<span>${lang.native}</span><span class="text-xs text-gray-400">${lang.name}</span>`;
+                dropdown.appendChild(option);
+            });
+        }
+
+        function toggleLangDropdown() { document.getElementById('langDropdown').classList.toggle('hidden'); }
+        document.addEventListener('click', (e) => { if (!e.target.closest('#langDropdownBtn') && !e.target.closest('#langDropdown')) document.getElementById('langDropdown').classList.add('hidden'); });
+
+        async function changeLanguage(langCode) {
+            currentLanguage = langCode;
+            localStorage.setItem('preferredLanguage', langCode);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/voice/translations/${langCode}`);
+                const data = await response.json();
+                if (data.success) { translations = data.translations; currentSpeechCode = data.speech_code; applyTranslations(); }
+                
+                const topicsResponse = await fetch(`${API_BASE_URL}/api/voice/topics?lang=${langCode}`);
+                const topicsData = await topicsResponse.json();
+                if (topicsData.success) renderTopics(topicsData.topics);
+            } catch (e) { console.error('Language change failed:', e); }
+            
+            if (recognition) recognition.lang = currentSpeechCode;
+            renderLanguageOptions();
+            renderQuickQuestions();
+            const lang = availableLanguages.find(l => l.code === langCode);
+            if (lang) document.getElementById('currentLangName').textContent = lang.native;
+        }
+
+        function applyTranslations() {
+            document.getElementById('pageTitle').textContent = `🎙️ ${translations.voice_agent || 'AI Voice Agent'}`;
+            document.getElementById('pageSubtitle').textContent = translations.talk_expert || 'Talk to our AI expert for instant farming advice';
+            document.getElementById('agentStatus').textContent = translations.ready || 'Ready to help you';
+            document.getElementById('voiceStatus').textContent = translations.mic_prompt || 'Click the mic to start speaking';
+            document.getElementById('userInput').placeholder = translations.type_prompt || 'Type your question or click mic to speak...';
+            document.getElementById('quickQuestionsTitle').textContent = `💡 ${translations.quick_questions || 'Quick Questions'}`;
+            document.getElementById('selectLanguageTitle').textContent = `🌐 ${translations.select_language || 'Select Language'}`;
+            document.getElementById('aboutTitle').textContent = `🤖 ${translations.about || 'About Krishi AI'}`;
+            document.getElementById('topicsTitle').textContent = `📚 ${translations.topics || 'I Can Help With'}`;
+            document.getElementById('statsTitle').textContent = `📊 ${translations.session_stats || 'Session Stats'}`;
+            document.getElementById('questionsLabel').textContent = translations.questions_asked || 'Questions Asked';
+            document.getElementById('timeLabel').textContent = translations.session_time || 'Session Time';
+        }
+
+        function renderTopics(topics) {
+            const colors = ['green', 'blue', 'orange', 'purple', 'yellow', 'pink', 'teal'];
+            document.getElementById('topicsContainer').innerHTML = topics.map((t, i) => 
+                `<div class="flex items-center px-3 py-2 bg-${colors[i % colors.length]}-50 rounded-lg"><span class="mr-2">${t.icon}</span><span class="text-sm text-gray-700">${t.name}</span></div>`
+            ).join('');
+        }
+
+        function renderQuickQuestions() {
+            const questions = quickQuestions[currentLanguage] || quickQuestions['en'];
+            document.getElementById('quickQuestionsContainer').innerHTML = questions.map(q => 
+                `<button onclick="askQuestion('${q.text.replace(/'/g, "\\'")}')" class="px-4 py-2 bg-${q.color}-50 text-${q.color}-700 rounded-full text-sm hover:bg-${q.color}-100 transition">${q.icon} ${q.text}</button>`
+            ).join('');
+        }
+
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SR();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = currentSpeechCode;
+                recognition.onresult = (e) => { document.getElementById('userInput').value = Array.from(e.results).map(r => r[0].transcript).join(''); };
+                recognition.onend = () => { if (isListening) { stopListening(); if (document.getElementById('userInput').value.trim()) sendMessage(); } };
+                recognition.onerror = () => stopListening();
+            }
+        }
+
+        function addWelcomeMessage() {
+            document.getElementById('chatContainer').innerHTML = `
+                <div class="flex items-start space-x-3">
+                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-xl flex-shrink-0">🤖</div>
+                    <div class="bg-white rounded-2xl rounded-tl-none p-4 shadow-sm max-w-md">
+                        <p class="text-gray-800">${translations.welcome || "Hello! I'm Krishi AI, your agricultural assistant."}</p>
+                        <ul class="mt-2 space-y-1 text-sm text-gray-600">
+                            <li>🎤 Click the mic to speak in your language</li>
+                            <li>⌨️ Or type your question below</li>
+                            <li>🌾 Ask about crops, soil, weather, schemes!</li>
+                        </ul>
+                    </div>
+                </div>`;
+        }
+
+        function toggleVoice() { isListening ? stopListening() : startListening(); }
+
+        function startListening() {
+            if (!recognition) { alert('Speech recognition not supported'); return; }
+            recognition.lang = currentSpeechCode;
+            isListening = true;
+            recognition.start();
+            document.getElementById('voiceBtn').classList.replace('bg-green-600', 'bg-red-500');
+            document.getElementById('micIcon').textContent = '⏹️';
+            document.getElementById('pulseRing').classList.remove('hidden');
+            document.getElementById('voiceWaveContainer').classList.remove('hidden');
+            document.getElementById('voiceWave').classList.remove('inactive');
+            document.getElementById('voiceStatus').textContent = translations.listening || 'Listening... Speak now';
+            document.getElementById('agentStatus').textContent = translations.listening || 'Listening...';
+        }
+
+        function stopListening() {
+            isListening = false;
+            if (recognition) recognition.stop();
+            document.getElementById('voiceBtn').classList.replace('bg-red-500', 'bg-green-600');
+            document.getElementById('micIcon').textContent = '🎤';
+            document.getElementById('pulseRing').classList.add('hidden');
+            document.getElementById('voiceWave').classList.add('inactive');
+            document.getElementById('voiceStatus').textContent = translations.mic_prompt || 'Click the mic to start speaking';
+            document.getElementById('agentStatus').textContent = translations.ready || 'Ready to help you';
+        }
+
+        function askQuestion(q) { document.getElementById('userInput').value = q; sendMessage(); }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+            input.value = '';
+            questionsCount++;
+            document.getElementById('questionsAsked').textContent = questionsCount;
+            addMessage(message, 'user');
+            const typingId = showTyping();
+            document.getElementById('agentStatus').textContent = translations.thinking || 'Thinking...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/voice/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, language: currentLanguage })
+                });
+                const data = await response.json();
+                removeTyping(typingId);
+                if (data.success) {
+                    addMessage(data.response, 'agent');
+                    document.getElementById('agentStatus').textContent = translations.ready || 'Ready to help you';
+                    speak(data.response, data.speech_code || currentSpeechCode);
+                } else {
+                    addMessage('Sorry, please try again.', 'agent');
+                }
+            } catch (e) {
+                removeTyping(typingId);
+                addMessage('Connection error. Please try again.', 'agent');
+            }
+        }
+
+        function addMessage(text, sender) {
+            const container = document.getElementById('chatContainer');
+            const isUser = sender === 'user';
+            const formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+            const div = document.createElement('div');
+            div.className = `flex items-start space-x-3 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`;
+            div.innerHTML = `
+                <div class="w-10 h-10 ${isUser ? 'bg-blue-100' : 'bg-green-100'} rounded-full flex items-center justify-center text-xl flex-shrink-0">${isUser ? '👤' : '🤖'}</div>
+                <div class="${isUser ? 'bg-blue-500 text-white rounded-tr-none' : 'bg-white rounded-tl-none shadow-sm text-gray-800'} rounded-2xl p-4 max-w-md">${formatted}</div>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showTyping() {
+            const container = document.getElementById('chatContainer');
+            const id = 'typing-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'flex items-start space-x-3';
+            div.innerHTML = `<div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-xl flex-shrink-0">🤖</div>
+                <div class="bg-white rounded-2xl rounded-tl-none p-4 shadow-sm"><div class="flex space-x-1">
+                    <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                </div></div>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return id;
+        }
+
+        function removeTyping(id) { const el = document.getElementById(id); if (el) el.remove(); }
+
+        function speak(text, speechCode) {
+            if (!synthesis) return;
+            synthesis.cancel();
+            const clean = text.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/\*\*/g, '').replace(/•/g, '').substring(0, 500);
+            const utterance = new SpeechSynthesisUtterance(clean);
+            utterance.lang = speechCode || currentSpeechCode;
+            utterance.rate = 0.9;
+            const voices = synthesis.getVoices();
+            const langVoice = voices.find(v => v.lang.startsWith(speechCode?.split('-')[0] || 'en'));
+            if (langVoice) utterance.voice = langVoice;
+            document.getElementById('voiceWaveContainer').classList.remove('hidden');
+            document.getElementById('voiceWave').classList.remove('inactive');
+            document.getElementById('agentStatus').textContent = translations.speaking || 'Speaking...';
+            utterance.onend = () => {
+                document.getElementById('voiceWave').classList.add('inactive');
+                document.getElementById('voiceWaveContainer').classList.add('hidden');
+                document.getElementById('agentStatus').textContent = translations.ready || 'Ready to help you';
+            };
+            synthesis.speak(utterance);
+        }
+
+        document.getElementById('userInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+        
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('active');
+        }
+    </script>
+</body>
+</html>
