@@ -4,7 +4,7 @@ CropYield AI - Crop Yield Prediction & Recommendation System
 With LiveKit Integration for Expert Consultations
 """
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 import os
 import sys
@@ -85,6 +85,11 @@ def voice_agent_page():
 @app.route('/weather')
 def weather_page():
     return render_template('weather.html')
+
+# Favicon route
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204
 
 # Health check
 @app.route('/api/health')
