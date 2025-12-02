@@ -104,6 +104,162 @@ def voice_agent_page():
 
 # ============= YIELD PREDICTION API =============
 import requests as http_requests
+from datetime import datetime, timedelta
+
+# NASA POWER API for satellite soil and weather data
+NASA_POWER_BASE_URL = "https://power.larc.nasa.gov/api/temporal/daily/point"
+NASA_AGRO_PARAMETERS = [
+    "T2M",          # Temperature at 2m (°C)
+    "T2M_MAX",      # Max temperature
+    "T2M_MIN",      # Min temperature
+    "RH2M",         # Relative humidity at 2m (%)
+    "PRECTOTCORR", # Precipitation (mm/day)
+    "ALLSKY_SFC_SW_DWN",  # Solar radiation (MJ/m²/day)
+    "WS2M",         # Wind speed at 2m (m/s)
+    "GWETROOT",     # Root zone soil wetness (0-1)
+    "GWETPROF",     # Profile soil wetness (0-1)
+    "EVPTRNS",      # Evapotranspiration (mm/day)
+]
+
+# State coordinates for NASA POWER API
+STATE_COORDS = {
+    'Punjab': {'lat': 31.1471, 'lon': 75.3412, 'city': 'Ludhiana'},
+    'Haryana': {'lat': 29.0588, 'lon': 76.0856, 'city': 'Hisar'},
+    'Uttar Pradesh': {'lat': 26.8467, 'lon': 80.9462, 'city': 'Lucknow'},
+    'West Bengal': {'lat': 22.5726, 'lon': 88.3639, 'city': 'Kolkata'},
+    'Andhra Pradesh': {'lat': 15.9129, 'lon': 79.7400, 'city': 'Guntur'},
+    'Tamil Nadu': {'lat': 11.1271, 'lon': 78.6569, 'city': 'Trichy'},
+    'Karnataka': {'lat': 15.3173, 'lon': 75.7139, 'city': 'Hubli'},
+    'Maharashtra': {'lat': 19.7515, 'lon': 75.7139, 'city': 'Aurangabad'},
+    'Madhya Pradesh': {'lat': 23.2599, 'lon': 77.4126, 'city': 'Bhopal'},
+    'Gujarat': {'lat': 22.2587, 'lon': 71.1924, 'city': 'Rajkot'},
+    'Rajasthan': {'lat': 27.0238, 'lon': 74.2179, 'city': 'Jaipur'},
+    'Bihar': {'lat': 25.5941, 'lon': 85.1376, 'city': 'Patna'},
+    'Odisha': {'lat': 20.2961, 'lon': 85.8245, 'city': 'Bhubaneswar'},
+    'Assam': {'lat': 26.2006, 'lon': 92.9376, 'city': 'Guwahati'},
+    'Jharkhand': {'lat': 23.6102, 'lon': 85.2799, 'city': 'Ranchi'},
+    'Chhattisgarh': {'lat': 21.2787, 'lon': 81.8661, 'city': 'Raipur'},
+    'Kerala': {'lat': 10.8505, 'lon': 76.2711, 'city': 'Thrissur'},
+    'Telangana': {'lat': 18.1124, 'lon': 79.0193, 'city': 'Warangal'},
+}
+
+def get_nasa_power_data(state, days=30):
+    """Fetch NASA POWER satellite data for a state"""
+    if state not in STATE_COORDS:
+        return None
+    
+    coords = STATE_COORDS[state]
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+    
+    try:
+        params = {
+            'parameters': ','.join(NASA_AGRO_PARAMETERS),
+            'community': 'AG',
+            'longitude': coords['lon'],
+            'latitude': coords['lat'],
+            'start': start_date.strftime('%Y%m%d'),
+            'end': end_date.strftime('%Y%m%d'),
+            'format': 'JSON'
+        }
+        
+        response = http_requests.get(NASA_POWER_BASE_URL, params=params, timeout=15)
+        
+        if response.status_code == 200:
+            raw_data = response.json()
+            return process_nasa_data(raw_data, state, coords)
+    except Exception as e:
+        print(f"NASA POWER error: {e}")
+    return None
+
+def process_nasa_data(raw_data, state, coords):
+    """Process NASA POWER API response"""
+    try:
+        properties = raw_data.get('properties', {}).get('parameter', {})
+        processed = {
+            'state': state,
+            'coordinates': {'lat': coords['lat'], 'lon': coords['lon']},
+            'source': 'NASA POWER'
+        }
+        
+        for param in NASA_AGRO_PARAMETERS:
+            if param in properties:
+                values = [v for v in properties[param].values() if v != -999]
+                if values:
+                    processed[param] = {
+                        'average': round(sum(values) / len(values), 2),
+                        'min': round(min(values), 2),
+                        'max': round(max(values), 2)
+                    }
+        
+        # Calculate soil moisture index
+        root_wet = processed.get('GWETROOT', {}).get('average', 0.5)
+        prof_wet = processed.get('GWETPROF', {}).get('average', 0.5)
+        processed['soil_moisture_index'] = round((root_wet + prof_wet) / 2, 3)
+        
+        # Soil condition
+        smi = processed['soil_moisture_index']
+        if smi < 0.2:
+            processed['soil_condition'] = 'Very Dry - Critical'
+        elif smi < 0.4:
+            processed['soil_condition'] = 'Dry - Needs Irrigation'
+        elif smi < 0.6:
+            processed['soil_condition'] = 'Optimal'
+        elif smi < 0.8:
+            processed['soil_condition'] = 'Moist'
+        else:
+            processed['soil_condition'] = 'Wet - Drainage Needed'
+        
+        return processed
+    except Exception as e:
+        print(f"NASA process error: {e}")
+        return None
+
+def calculate_nasa_yield_factor(nasa_data, crop):
+    """Calculate yield factor from NASA data"""
+    if not nasa_data:
+        return 1.0, []
+    
+    factors = []
+    insights = []
+    
+    # Soil moisture factor
+    soil_moisture = nasa_data.get('soil_moisture_index', 0.5)
+    if 0.4 <= soil_moisture <= 0.6:
+        soil_factor = 1.15
+        insights.append(f"🛰️ NASA: Soil moisture ({soil_moisture:.2f}) is ideal")
+    elif soil_moisture < 0.2:
+        soil_factor = 0.7
+        insights.append(f"🛰️ NASA: Soil very dry - needs irrigation")
+    elif soil_moisture > 0.8:
+        soil_factor = 0.8
+        insights.append(f"🛰️ NASA: Soil waterlogged - needs drainage")
+    else:
+        soil_factor = 0.95
+    factors.append(soil_factor)
+    
+    # Temperature factor
+    temp = nasa_data.get('T2M', {}).get('average', 25)
+    if 20 <= temp <= 30:
+        factors.append(1.1)
+        insights.append(f"🛰️ NASA: Temperature ({temp:.1f}°C) is ideal")
+    elif temp < 15 or temp > 38:
+        factors.append(0.7)
+    else:
+        factors.append(0.95)
+    
+    # Solar radiation factor
+    solar = nasa_data.get('ALLSKY_SFC_SW_DWN', {}).get('average', 18)
+    if 15 <= solar <= 22:
+        factors.append(1.1)
+        insights.append(f"🛰️ NASA: Solar radiation ({solar:.1f} MJ/m²) excellent")
+    elif solar < 10:
+        factors.append(0.8)
+    else:
+        factors.append(1.0)
+    
+    combined_factor = sum(factors) / len(factors)
+    return round(combined_factor, 3), insights
 
 CROP_DATA = {
     'rice': {'base_yield': 4500, 'water_need': 'high', 'season': ['Kharif']},
@@ -195,13 +351,30 @@ def predict_yield():
         season_factor = 1.1 if season in crop_info['season'] else 0.85
         weather_factor = 1.0
         
-        predicted_yield = int(base_yield * soil_factor * ph_factor * season_factor * weather_factor)
+        # Get NASA POWER satellite data
+        nasa_data = None
+        nasa_factor = 1.0
+        nasa_insights = []
+        if data.get('use_nasa_data', True):
+            nasa_data = get_nasa_power_data(state)
+            if nasa_data:
+                nasa_factor, nasa_insights = calculate_nasa_yield_factor(nasa_data, crop)
+        
+        predicted_yield = int(base_yield * soil_factor * ph_factor * season_factor * weather_factor * nasa_factor)
         total_yield = int(predicted_yield * area)
-        confidence = min(95, int(75 + (soil_factor * 10) + (ph_factor * 5)))
+        
+        # Higher confidence with NASA data
+        base_confidence = 75 + (soil_factor * 10) + (ph_factor * 5)
+        if nasa_data:
+            base_confidence += 5
+        confidence = min(95, int(base_confidence))
         
         category = 'Excellent' if predicted_yield > base_yield * 1.1 else 'Good' if predicted_yield > base_yield * 0.9 else 'Average' if predicted_yield > base_yield * 0.7 else 'Below Average'
         
-        return jsonify({
+        insights = [f'{crop.title()} grows well in {season} season', f'Soil conditions are {"optimal" if soil_factor > 1 else "fair"}']
+        insights = nasa_insights + insights
+        
+        response_data = {
             'success': True,
             'prediction': {
                 'predicted_yield': predicted_yield,
@@ -212,14 +385,75 @@ def predict_yield():
                 'factors': {
                     'soil_factor': round(soil_factor, 2),
                     'weather_factor': round(weather_factor, 2),
-                    'season_factor': round(season_factor, 2)
+                    'season_factor': round(season_factor, 2),
                 },
-                'insights': [f'{crop.title()} grows well in {season} season', f'Soil conditions are {"optimal" if soil_factor > 1 else "fair"}'],
+                'insights': insights,
                 'recommendations': ['Consider adding organic matter', 'Monitor water levels regularly']
+            },
+            'data_sources': ['user_input']
+        }
+        
+        if nasa_data:
+            response_data['prediction']['factors']['nasa_satellite_factor'] = nasa_factor
+            response_data['nasa_data'] = {
+                'soil_moisture_index': nasa_data.get('soil_moisture_index'),
+                'soil_condition': nasa_data.get('soil_condition'),
+                'temperature': nasa_data.get('T2M', {}).get('average'),
+                'humidity': nasa_data.get('RH2M', {}).get('average'),
+                'solar_radiation': nasa_data.get('ALLSKY_SFC_SW_DWN', {}).get('average'),
+                'precipitation': nasa_data.get('PRECTOTCORR', {}).get('average')
             }
-        })
+            response_data['data_sources'].append('NASA POWER')
+        
+        return jsonify(response_data)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/yield/nasa-data/<state>', methods=['GET'])
+def get_nasa_soil_data(state):
+    """Get NASA POWER satellite data for a state"""
+    data = get_nasa_power_data(state)
+    if data:
+        return jsonify({
+            'success': True,
+            'state': state,
+            'source': 'NASA POWER Satellite',
+            'data': {
+                'soil_moisture_index': data.get('soil_moisture_index'),
+                'soil_condition': data.get('soil_condition'),
+                'root_zone_wetness': data.get('GWETROOT', {}).get('average'),
+                'profile_wetness': data.get('GWETPROF', {}).get('average'),
+                'temperature': {
+                    'average': data.get('T2M', {}).get('average'),
+                    'max': data.get('T2M_MAX', {}).get('average'),
+                    'min': data.get('T2M_MIN', {}).get('average'),
+                    'unit': '°C'
+                },
+                'humidity': {
+                    'average': data.get('RH2M', {}).get('average'),
+                    'unit': '%'
+                },
+                'precipitation': {
+                    'average': data.get('PRECTOTCORR', {}).get('average'),
+                    'unit': 'mm/day'
+                },
+                'solar_radiation': {
+                    'average': data.get('ALLSKY_SFC_SW_DWN', {}).get('average'),
+                    'unit': 'MJ/m²/day'
+                },
+                'evapotranspiration': {
+                    'average': data.get('EVPTRNS', {}).get('average'),
+                    'unit': 'mm/day'
+                },
+                'wind_speed': {
+                    'average': data.get('WS2M', {}).get('average'),
+                    'unit': 'm/s'
+                }
+            },
+            'coordinates': data.get('coordinates')
+        })
+    return jsonify({'success': False, 'error': 'NASA POWER data not available for this state'}), 404
 
 
 # ============= RECOMMENDATION API =============

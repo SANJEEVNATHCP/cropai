@@ -2,12 +2,29 @@ from flask import Blueprint, request, jsonify
 import json
 import os
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 yield_bp = Blueprint('yield', __name__)
 
 # OpenWeatherMap API key
 OPENWEATHER_API_KEY = 'b576d8a952bf4c45c7ef5bddb148e76b'
+
+# NASA POWER API Base URL (FREE - No API key needed!)
+NASA_POWER_BASE_URL = "https://power.larc.nasa.gov/api/temporal/daily/point"
+
+# NASA POWER Parameters for Agriculture
+NASA_AGRO_PARAMETERS = [
+    'T2M',              # Temperature at 2 meters (°C)
+    'T2M_MAX',          # Maximum Temperature (°C)
+    'T2M_MIN',          # Minimum Temperature (°C)
+    'RH2M',             # Relative Humidity (%)
+    'PRECTOTCORR',      # Precipitation (mm/day)
+    'ALLSKY_SFC_SW_DWN', # Solar Radiation (MJ/m²/day)
+    'GWETROOT',         # Root Zone Soil Wetness (0-1)
+    'GWETPROF',         # Profile Soil Wetness (0-1)
+    'EVPTRNS',          # Evapotranspiration (mm/day)
+    'WS2M',             # Wind Speed (m/s)
+]
 
 # State capital cities for weather lookup
 STATE_CITIES = {
@@ -30,6 +47,129 @@ STATE_CITIES = {
     'Kerala': {'city': 'Kochi', 'lat': 9.9312, 'lon': 76.2673},
     'Telangana': {'city': 'Hyderabad', 'lat': 17.3850, 'lon': 78.4867},
 }
+
+
+# ============= NASA POWER FUNCTIONS =============
+
+def get_nasa_power_data(state, days=14):
+    """Fetch agricultural data from NASA POWER API (FREE - No API key needed)"""
+    if state not in STATE_CITIES:
+        return None
+    
+    coords = STATE_CITIES[state]
+    end_date = (datetime.now() - timedelta(days=7)).strftime('%Y%m%d')
+    start_date = (datetime.now() - timedelta(days=days+7)).strftime('%Y%m%d')
+    
+    params = {
+        'parameters': ','.join(NASA_AGRO_PARAMETERS),
+        'community': 'AG',
+        'longitude': coords['lon'],
+        'latitude': coords['lat'],
+        'start': start_date,
+        'end': end_date,
+        'format': 'JSON'
+    }
+    
+    try:
+        print(f"[NASA POWER] Fetching data for {state}...")
+        response = requests.get(NASA_POWER_BASE_URL, params=params, timeout=30)
+        if response.status_code == 200:
+            data = response.json()
+            raw_data = data.get('properties', {}).get('parameter', {})
+            processed = process_nasa_data(raw_data, state, coords)
+            print(f"[NASA POWER] Success! Got data for {state}")
+            return processed
+    except Exception as e:
+        print(f"[NASA POWER] Error: {e}")
+    return None
+
+
+def process_nasa_data(raw_data, state, coords):
+    """Process NASA POWER data into usable format"""
+    processed = {
+        'state': state,
+        'coordinates': coords,
+        'source': 'NASA POWER'
+    }
+    
+    for param, values in raw_data.items():
+        if isinstance(values, dict):
+            valid = [v for v in values.values() if v != -999 and v is not None]
+            if valid:
+                processed[param] = {
+                    'average': round(sum(valid) / len(valid), 2),
+                    'min': round(min(valid), 2),
+                    'max': round(max(valid), 2)
+                }
+    
+    # Calculate soil moisture index (0-1 scale)
+    root_wet = processed.get('GWETROOT', {}).get('average', 0.5)
+    prof_wet = processed.get('GWETPROF', {}).get('average', 0.5)
+    soil_moisture = round(root_wet * 0.6 + prof_wet * 0.4, 3)
+    processed['soil_moisture_index'] = soil_moisture
+    
+    # Determine soil condition
+    if soil_moisture >= 0.8:
+        processed['soil_condition'] = 'Waterlogged'
+    elif soil_moisture >= 0.6:
+        processed['soil_condition'] = 'Adequate'
+    elif soil_moisture >= 0.4:
+        processed['soil_condition'] = 'Moderate'
+    elif soil_moisture >= 0.2:
+        processed['soil_condition'] = 'Dry'
+    else:
+        processed['soil_condition'] = 'Very Dry'
+    
+    return processed
+
+
+def calculate_nasa_yield_factor(nasa_data, crop):
+    """Calculate yield adjustment factor based on NASA data"""
+    if not nasa_data:
+        return 1.0, []
+    
+    insights = []
+    factors = []
+    
+    # Soil moisture factor
+    soil_moisture = nasa_data.get('soil_moisture_index', 0.5)
+    if 0.4 <= soil_moisture <= 0.7:
+        soil_factor = 1.1
+        insights.append(f"🛰️ NASA: Soil moisture ({soil_moisture:.2f}) is optimal")
+    elif soil_moisture < 0.2:
+        soil_factor = 0.7
+        insights.append(f"🛰️ NASA: Soil very dry ({soil_moisture:.2f}) - needs irrigation")
+    elif soil_moisture > 0.8:
+        soil_factor = 0.8
+        insights.append(f"🛰️ NASA: Soil waterlogged ({soil_moisture:.2f}) - needs drainage")
+    else:
+        soil_factor = 0.9
+    factors.append(soil_factor)
+    
+    # Temperature factor
+    temp = nasa_data.get('T2M', {}).get('average', 25)
+    if 20 <= temp <= 30:
+        temp_factor = 1.1
+        insights.append(f"🛰️ NASA: Temperature ({temp:.1f}°C) is ideal")
+    elif temp < 15 or temp > 38:
+        temp_factor = 0.7
+    else:
+        temp_factor = 0.95
+    factors.append(temp_factor)
+    
+    # Solar radiation factor
+    solar = nasa_data.get('ALLSKY_SFC_SW_DWN', {}).get('average', 18)
+    if 15 <= solar <= 22:
+        solar_factor = 1.1
+        insights.append(f"🛰️ NASA: Solar radiation ({solar:.1f} MJ/m²) excellent")
+    elif solar < 10:
+        solar_factor = 0.8
+    else:
+        solar_factor = 1.0
+    factors.append(solar_factor)
+    
+    combined_factor = sum(factors) / len(factors)
+    return round(combined_factor, 3), insights
 
 def get_live_weather(state):
     """Fetch live weather data for a state"""
@@ -156,8 +296,8 @@ def calculate_weather_factor(crop, rainfall, temperature, humidity):
     return rainfall_factor * 0.4 + temp_factor * 0.35 + humidity_factor * 0.25
 
 
-def predict_yield(crop, state, n, p, k, ph, rainfall, temperature, humidity, area=1):
-    """Main yield prediction function"""
+def predict_yield(crop, state, n, p, k, ph, rainfall, temperature, humidity, area=1, nasa_factor=1.0):
+    """Main yield prediction function with NASA satellite data support"""
     crop = crop.lower()
     
     if crop not in CROP_YIELD_DATA:
@@ -170,11 +310,14 @@ def predict_yield(crop, state, n, p, k, ph, rainfall, temperature, humidity, are
     weather_factor = calculate_weather_factor(crop, rainfall, temperature, humidity)
     state_factor = STATE_FACTORS.get(state, 1.0)
     
-    # Calculate predicted yield
-    predicted_yield = base_yield * soil_factor * weather_factor * state_factor
+    # Calculate predicted yield with NASA satellite factor
+    predicted_yield = base_yield * soil_factor * weather_factor * state_factor * nasa_factor
     
-    # Confidence calculation
-    confidence = min(95, 70 + soil_factor * 10 + weather_factor * 10)
+    # Confidence calculation (higher with NASA data)
+    base_confidence = 70 + soil_factor * 10 + weather_factor * 10
+    if nasa_factor != 1.0:
+        base_confidence += 5  # Higher confidence with satellite data
+    confidence = min(95, base_confidence)
     
     # Category
     yield_ratio = predicted_yield / base_yield
@@ -289,6 +432,15 @@ def predict():
     rainfall = float(data.get('rainfall', 800))
     area = float(data.get('area', 1))
     
+    # Try to get NASA POWER satellite data
+    nasa_data = None
+    nasa_factor = 1.0
+    nasa_insights = []
+    if data.get('use_nasa_data', True):
+        nasa_data = get_nasa_power_data(state)
+        if nasa_data:
+            nasa_factor, nasa_insights = calculate_nasa_yield_factor(nasa_data, crop)
+    
     # Try to get live weather data
     live_weather = get_live_weather(state)
     weather_source = 'live' if live_weather else 'user_input'
@@ -300,10 +452,18 @@ def predict():
         temperature = float(data.get('temperature', 25))
         humidity = float(data.get('humidity', 70))
     
-    result, error = predict_yield(crop, state, n, p, k, ph, rainfall, temperature, humidity, area)
+    result, error = predict_yield(crop, state, n, p, k, ph, rainfall, temperature, humidity, area, nasa_factor)
     
     if error:
         return jsonify({'success': False, 'error': error}), 400
+    
+    # Add NASA insights to result
+    if nasa_insights:
+        result['insights'] = nasa_insights + result['insights']
+    
+    # Add NASA factor to result
+    if nasa_data:
+        result['factors']['nasa_satellite_factor'] = nasa_factor
     
     response_data = {
         'success': True,
@@ -315,13 +475,72 @@ def predict():
             'soil': {'n': n, 'p': p, 'k': k, 'ph': ph},
             'weather': {'rainfall': rainfall, 'temperature': temperature, 'humidity': humidity}
         },
-        'weather_source': weather_source
+        'weather_source': weather_source,
+        'data_sources': ['user_input']
     }
     
     if live_weather:
         response_data['live_weather'] = live_weather
+        response_data['data_sources'].append('OpenWeatherMap')
+    
+    if nasa_data:
+        response_data['nasa_data'] = {
+            'soil_moisture_index': nasa_data.get('soil_moisture_index'),
+            'soil_condition': nasa_data.get('soil_condition'),
+            'temperature': nasa_data.get('T2M', {}).get('average'),
+            'humidity': nasa_data.get('RH2M', {}).get('average'),
+            'solar_radiation': nasa_data.get('ALLSKY_SFC_SW_DWN', {}).get('average'),
+            'precipitation': nasa_data.get('PRECTOTCORR', {}).get('average')
+        }
+        response_data['data_sources'].append('NASA POWER')
     
     return jsonify(response_data), 200
+
+
+@yield_bp.route('/nasa-data/<state>', methods=['GET'])
+def get_nasa_soil_data(state):
+    """Get NASA POWER satellite data for a state - soil moisture, temperature, etc."""
+    data = get_nasa_power_data(state)
+    if data:
+        return jsonify({
+            'success': True,
+            'state': state,
+            'source': 'NASA POWER Satellite',
+            'data': {
+                'soil_moisture_index': data.get('soil_moisture_index'),
+                'soil_condition': data.get('soil_condition'),
+                'root_zone_wetness': data.get('GWETROOT', {}).get('average'),
+                'profile_wetness': data.get('GWETPROF', {}).get('average'),
+                'temperature': {
+                    'average': data.get('T2M', {}).get('average'),
+                    'max': data.get('T2M_MAX', {}).get('average'),
+                    'min': data.get('T2M_MIN', {}).get('average'),
+                    'unit': '°C'
+                },
+                'humidity': {
+                    'average': data.get('RH2M', {}).get('average'),
+                    'unit': '%'
+                },
+                'precipitation': {
+                    'average': data.get('PRECTOTCORR', {}).get('average'),
+                    'unit': 'mm/day'
+                },
+                'solar_radiation': {
+                    'average': data.get('ALLSKY_SFC_SW_DWN', {}).get('average'),
+                    'unit': 'MJ/m²/day'
+                },
+                'evapotranspiration': {
+                    'average': data.get('EVPTRNS', {}).get('average'),
+                    'unit': 'mm/day'
+                },
+                'wind_speed': {
+                    'average': data.get('WS2M', {}).get('average'),
+                    'unit': 'm/s'
+                }
+            },
+            'coordinates': data.get('coordinates')
+        })
+    return jsonify({'success': False, 'error': 'NASA POWER data not available for this state'}), 404
 
 
 @yield_bp.route('/weather/<state>', methods=['GET'])
