@@ -100,16 +100,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
             </button>
-            
-            <!-- Language Selector in Header -->
-            <div class="relative">
-                <button id="langDropdownBtn" onclick="toggleLangDropdown()" class="flex items-center space-x-2 bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg transition">
-                    <span>🌐</span>
-                    <span id="currentLangName" class="hidden sm:inline">English</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                </button>
-                <div id="langDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl py-2 z-50 max-h-80 overflow-y-auto"></div>
-            </div>
         </div>
         <!-- Mobile Menu -->
         <div id="mobileMenu" class="mobile-menu md:hidden bg-green-800 px-4 py-3">
@@ -189,19 +179,13 @@
 
             <!-- Right: Info Panel -->
             <div class="space-y-4 md:space-y-6 order-2">
-                <!-- Language Selection Card -->
-                <div class="bg-white rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6">
-                    <h3 id="selectLanguageTitle" class="text-base md:text-xl font-bold text-gray-800 mb-3 md:mb-4">🌐 Select Language</h3>
-                    <div id="languageGrid" class="grid grid-cols-3 md:grid-cols-2 gap-2"></div>
-                </div>
-                
                 <!-- Agent Info -->
                 <div class="bg-white rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6 hidden md:block">
                     <h3 id="aboutTitle" class="text-base md:text-xl font-bold text-gray-800 mb-3 md:mb-4">🤖 About Krishi AI</h3>
                     <div class="space-y-4">
                         <div class="flex items-center space-x-3"><span class="text-2xl">🧠</span><div><p class="font-semibold text-gray-800">AI-Powered</p><p class="text-sm text-gray-500">Google Gemini AI</p></div></div>
-                        <div class="flex items-center space-x-3"><span class="text-2xl">🌍</span><div><p class="font-semibold text-gray-800">11 Languages</p><p class="text-sm text-gray-500">Hindi, Marathi, Telugu & more</p></div></div>
-                        <div class="flex items-center space-x-3"><span class="text-2xl">🎤</span><div><p class="font-semibold text-gray-800">Voice Enabled</p><p class="text-sm text-gray-500">Speak in your language</p></div></div>
+                        <div class="flex items-center space-x-3"><span class="text-2xl">🎤</span><div><p class="font-semibold text-gray-800">Voice Enabled</p><p class="text-sm text-gray-500">Speak to get answers</p></div></div>
+                        <div class="flex items-center space-x-3"><span class="text-2xl">🌾</span><div><p class="font-semibold text-gray-800">Farming Expert</p><p class="text-sm text-gray-500">Crops, soil, weather & schemes</p></div></div>
                     </div>
                 </div>
 
@@ -265,27 +249,8 @@
         }
 
         function renderLanguageOptions() {
-            const grid = document.getElementById('languageGrid');
-            const dropdown = document.getElementById('langDropdown');
-            grid.innerHTML = ''; dropdown.innerHTML = '';
-            
-            availableLanguages.forEach(lang => {
-                const btn = document.createElement('button');
-                btn.className = `lang-option p-3 rounded-xl border-2 text-center ${lang.code === currentLanguage ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300'}`;
-                btn.onclick = () => changeLanguage(lang.code);
-                btn.innerHTML = `<p class="font-bold text-gray-800">${lang.native}</p><p class="text-xs text-gray-500">${lang.name}</p>`;
-                grid.appendChild(btn);
-                
-                const option = document.createElement('button');
-                option.className = `w-full px-4 py-2 text-left hover:bg-green-50 flex justify-between ${lang.code === currentLanguage ? 'bg-green-50 text-green-700' : 'text-gray-700'}`;
-                option.onclick = () => { changeLanguage(lang.code); toggleLangDropdown(); };
-                option.innerHTML = `<span>${lang.native}</span><span class="text-xs text-gray-400">${lang.name}</span>`;
-                dropdown.appendChild(option);
-            });
+            // Language selection removed - using English only
         }
-
-        function toggleLangDropdown() { document.getElementById('langDropdown').classList.toggle('hidden'); }
-        document.addEventListener('click', (e) => { if (!e.target.closest('#langDropdownBtn') && !e.target.closest('#langDropdown')) document.getElementById('langDropdown').classList.add('hidden'); });
 
         async function changeLanguage(langCode) {
             currentLanguage = langCode;
@@ -302,10 +267,7 @@
             } catch (e) { console.error('Language change failed:', e); }
             
             if (recognition) recognition.lang = currentSpeechCode;
-            renderLanguageOptions();
             renderQuickQuestions();
-            const lang = availableLanguages.find(l => l.code === langCode);
-            if (lang) document.getElementById('currentLangName').textContent = lang.native;
         }
 
         function applyTranslations() {
@@ -315,7 +277,6 @@
             document.getElementById('voiceStatus').textContent = translations.mic_prompt || 'Click the mic to start speaking';
             document.getElementById('userInput').placeholder = translations.type_prompt || 'Type your question or click mic to speak...';
             document.getElementById('quickQuestionsTitle').textContent = `💡 ${translations.quick_questions || 'Quick Questions'}`;
-            document.getElementById('selectLanguageTitle').textContent = `🌐 ${translations.select_language || 'Select Language'}`;
             document.getElementById('aboutTitle').textContent = `🤖 ${translations.about || 'About Krishi AI'}`;
             document.getElementById('topicsTitle').textContent = `📚 ${translations.topics || 'I Can Help With'}`;
             document.getElementById('statsTitle').textContent = `📊 ${translations.session_stats || 'Session Stats'}`;
