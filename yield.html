@@ -23,6 +23,9 @@
         .glass { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
         .mobile-menu { display: none; }
         .mobile-menu.active { display: block; }
+        .lang-dropdown { display: none; }
+        .lang-dropdown.active { display: block; }
+        .lang-option:hover { background: #f0fdf4; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -34,11 +37,29 @@
                 <h1 class="text-2xl font-bold">CropYield<span class="text-yellow-300">AI</span></h1>
             </a>
             <nav class="hidden md:flex space-x-6">
-                <a href="/" class="hover:text-yellow-300 transition">Home</a>
-                <a href="/yield" class="text-yellow-300 font-semibold">Yield Prediction</a>
-                <a href="/recommendation" class="hover:text-yellow-300 transition">Crop Recommendation</a>
-                <a href="/voice-agent" class="hover:text-yellow-300 transition">AI Voice Agent</a>
+                <a href="/" class="hover:text-yellow-300 transition" data-i18n="nav_home">Home</a>
+                <a href="/yield" class="text-yellow-300 font-semibold" data-i18n="nav_yield">Yield Prediction</a>
+                <a href="/recommendation" class="hover:text-yellow-300 transition" data-i18n="nav_recommend">Crop Recommendation</a>
+                <a href="/voice-agent" class="hover:text-yellow-300 transition" data-i18n="nav_voice">AI Voice Agent</a>
             </nav>
+            <div class="flex items-center space-x-3">
+                <!-- Language Selector -->
+                <div class="relative">
+                    <button id="langBtn" onclick="toggleLangDropdown()" class="flex items-center space-x-1 bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg transition">
+                        <span>🌐</span>
+                        <span id="currentLang" class="hidden sm:inline text-sm">English</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div id="langDropdown" class="lang-dropdown absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl py-2 z-50 max-h-80 overflow-y-auto">
+                        <button onclick="changeLanguage('en')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center"><span>English</span><span class="text-xs text-gray-400">English</span></button>
+                        <button onclick="changeLanguage('hi')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center"><span>हिंदी</span><span class="text-xs text-gray-400">Hindi</span></button>
+                        <button onclick="changeLanguage('mr')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center"><span>मराठी</span><span class="text-xs text-gray-400">Marathi</span></button>
+                        <button onclick="changeLanguage('te')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center"><span>తెలుగు</span><span class="text-xs text-gray-400">Telugu</span></button>
+                        <button onclick="changeLanguage('ta')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center"><span>தமிழ்</span><span class="text-xs text-gray-400">Tamil</span></button>
+                        <button onclick="changeLanguage('kn')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center"><span>ಕನ್ನಡ</span><span class="text-xs text-gray-400">Kannada</span></button>
+                    </div>
+                </div>
+            </div>
             <!-- Mobile Menu Button -->
             <button onclick="toggleMobileMenu()" class="md:hidden text-white p-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,8 +82,8 @@
     <!-- Page Title -->
     <section class="gradient-bg text-white py-8 md:py-12">
         <div class="container mx-auto px-4 text-center">
-            <h2 class="text-2xl md:text-4xl font-bold mb-2 md:mb-4">📊 Crop Yield Prediction</h2>
-            <p class="text-base md:text-xl text-green-100">Predict your crop yields with AI</p>
+            <h2 class="text-2xl md:text-4xl font-bold mb-2 md:mb-4" data-i18n="page_title">📊 Crop Yield Prediction</h2>
+            <p class="text-base md:text-xl text-green-100" data-i18n="page_subtitle">Predict your crop yields with AI</p>
         </div>
     </section>
 
@@ -264,10 +285,32 @@
     <!-- Footer -->
     <footer class="gradient-bg text-white py-6 mt-12">
         <div class="container mx-auto px-4 text-center">
-            <p>🌾 CropYield AI - Empowering Farmers with AI | © 2025</p>
+            <p data-i18n="footer_text">🌾 CropYield AI - Empowering Farmers with AI | © 2025</p>
         </div>
     </footer>
 
+    <script>
+        // Multi-language translations
+        const translations = {
+            'en': { nav_home: 'Home', nav_yield: 'Yield Prediction', nav_recommend: 'Crop Recommendation', nav_voice: 'AI Voice Agent', page_title: '📊 Crop Yield Prediction', page_subtitle: 'Predict your crop yields with AI', footer_text: '🌾 CropYield AI - Empowering Farmers with AI | © 2025' },
+            'hi': { nav_home: 'होम', nav_yield: 'उपज भविष्यवाणी', nav_recommend: 'फसल सिफारिश', nav_voice: 'AI वॉइस एजेंट', page_title: '📊 फसल उपज भविष्यवाणी', page_subtitle: 'AI के साथ अपनी फसल उपज की भविष्यवाणी करें', footer_text: '🌾 CropYield AI - AI से किसानों को सशक्त बनाना | © 2025' },
+            'mr': { nav_home: 'होम', nav_yield: 'उत्पादन अंदाज', nav_recommend: 'पीक शिफारस', nav_voice: 'AI व्हॉइस एजंट', page_title: '📊 पीक उत्पादन अंदाज', page_subtitle: 'AI सह तुमच्या पिकाच्या उत्पादनाचा अंदाज', footer_text: '🌾 CropYield AI - AI सह शेतकऱ्यांना सक्षम करणे | © 2025' },
+            'te': { nav_home: 'హోమ్', nav_yield: 'దిగుబడి అంచనా', nav_recommend: 'పంట సిఫారసు', nav_voice: 'AI వాయిస్ ఏజెంట్', page_title: '📊 పంట దిగుబడి అంచనా', page_subtitle: 'AI తో మీ పంట దిగుబడిని అంచనా వేయండి', footer_text: '🌾 CropYield AI - AI తో రైతులను శక్తివంతం చేయడం | © 2025' },
+            'ta': { nav_home: 'முகப்பு', nav_yield: 'விளைச்சல் கணிப்பு', nav_recommend: 'பயிர் பரிந்துரை', nav_voice: 'AI குரல் முகவர்', page_title: '📊 பயிர் விளைச்சல் கணிப்பு', page_subtitle: 'AI மூலம் உங்கள் பயிர் விளைச்சலை கணிக்கவும்', footer_text: '🌾 CropYield AI - AI மூலம் விவசாயிகளை வலுப்படுத்துதல் | © 2025' },
+            'kn': { nav_home: 'ಮುಖಪುಟ', nav_yield: 'ಇಳುವರಿ ಊಹೆ', nav_recommend: 'ಬೆಳೆ ಶಿಫಾರಸು', nav_voice: 'AI ಧ್ವನಿ ಏಜೆಂಟ್', page_title: '📊 ಬೆಳೆ ಇಳುವರಿ ಊಹೆ', page_subtitle: 'AI ನೊಂದಿಗೆ ನಿಮ್ಮ ಬೆಳೆ ಇಳುವರಿಯನ್ನು ಊಹಿಸಿ', footer_text: '🌾 CropYield AI - AI ನೊಂದಿಗೆ ರೈತರನ್ನು ಸಬಲಗೊಳಿಸುವುದು | © 2025' }
+        };
+        const languageNames = { 'en': 'English', 'hi': 'हिंदी', 'mr': 'मराठी', 'te': 'తెలుగు', 'ta': 'தமிழ்', 'kn': 'ಕನ್ನಡ' };
+        let currentLanguage = localStorage.getItem('siteLanguage') || 'en';
+        document.addEventListener('DOMContentLoaded', () => applyLanguage(currentLanguage));
+        function toggleLangDropdown() { document.getElementById('langDropdown').classList.toggle('active'); }
+        document.addEventListener('click', (e) => { if (!e.target.closest('#langBtn') && !e.target.closest('#langDropdown')) document.getElementById('langDropdown').classList.remove('active'); });
+        function changeLanguage(lang) { currentLanguage = lang; localStorage.setItem('siteLanguage', lang); applyLanguage(lang); document.getElementById('langDropdown').classList.remove('active'); }
+        function applyLanguage(lang) {
+            const trans = translations[lang] || translations['en'];
+            document.querySelectorAll('[data-i18n]').forEach(el => { const key = el.getAttribute('data-i18n'); if (trans[key]) el.textContent = trans[key]; });
+            document.getElementById('currentLang').textContent = languageNames[lang];
+        }
+    </script>
     <script>
         const API_BASE_URL = window.location.origin;
         let predictionHistory = JSON.parse(localStorage.getItem('yieldHistory') || '[]');

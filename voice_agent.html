@@ -77,6 +77,9 @@
         /* Mobile menu */
         .mobile-menu { display: none; }
         .mobile-menu.active { display: block; }
+        /* Language dropdown */
+        .lang-dropdown { display: none; }
+        .lang-dropdown.active { display: block; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -88,11 +91,28 @@
                 <h1 class="text-2xl font-bold">CropYield<span class="text-yellow-300">AI</span></h1>
             </a>
             <nav class="hidden md:flex space-x-6">
-                <a href="/" class="hover:text-yellow-300 transition">Home</a>
-                <a href="/yield" class="hover:text-yellow-300 transition">Yield Prediction</a>
-                <a href="/recommendation" class="hover:text-yellow-300 transition">Crop Recommendation</a>
-                <a href="/voice-agent" class="text-yellow-300 font-semibold">AI Voice Agent</a>
+                <a href="/" class="hover:text-yellow-300 transition" data-i18n="nav_home">Home</a>
+                <a href="/yield" class="hover:text-yellow-300 transition" data-i18n="nav_yield">Yield Prediction</a>
+                <a href="/recommendation" class="hover:text-yellow-300 transition" data-i18n="nav_recommend">Crop Recommendation</a>
+                <a href="/voice-agent" class="text-yellow-300 font-semibold" data-i18n="nav_voice">AI Voice Agent</a>
             </nav>
+            <div class="flex items-center space-x-3">
+                <div class="relative">
+                    <button id="langBtnHeader" onclick="toggleLangDropdownHeader()" class="flex items-center space-x-1 bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg transition">
+                        <span>🌐</span>
+                        <span id="currentLangHeader" class="hidden sm:inline text-sm">English</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div id="langDropdownHeader" class="lang-dropdown absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl py-2 z-50 max-h-80 overflow-y-auto">
+                        <button onclick="selectSiteLanguage('en')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center"><span>English</span><span class="text-xs text-gray-400">English</span></button>
+                        <button onclick="selectSiteLanguage('hi')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center"><span>हिंदी</span><span class="text-xs text-gray-400">Hindi</span></button>
+                        <button onclick="selectSiteLanguage('mr')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center"><span>मराठी</span><span class="text-xs text-gray-400">Marathi</span></button>
+                        <button onclick="selectSiteLanguage('te')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center"><span>తెలుగు</span><span class="text-xs text-gray-400">Telugu</span></button>
+                        <button onclick="selectSiteLanguage('ta')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center"><span>தமிழ்</span><span class="text-xs text-gray-400">Tamil</span></button>
+                        <button onclick="selectSiteLanguage('kn')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center"><span>ಕನ್ನಡ</span><span class="text-xs text-gray-400">Kannada</span></button>
+                    </div>
+                </div>
+            </div>
             
             <!-- Mobile Menu Button -->
             <button onclick="toggleMobileMenu()" class="md:hidden text-white p-2 order-last">
@@ -441,6 +461,38 @@
         }
 
         document.getElementById('userInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+        
+        // Site-wide language translations
+        const siteTranslations = {
+            'en': { nav_home: 'Home', nav_yield: 'Yield Prediction', nav_recommend: 'Crop Recommendation', nav_voice: 'AI Voice Agent' },
+            'hi': { nav_home: 'होम', nav_yield: 'उपज भविष्यवाणी', nav_recommend: 'फसल सिफारिश', nav_voice: 'AI वॉइस एजेंट' },
+            'mr': { nav_home: 'होम', nav_yield: 'उत्पादन अंदाज', nav_recommend: 'पीक शिफारस', nav_voice: 'AI व्हॉइस एजंट' },
+            'te': { nav_home: 'హోమ్', nav_yield: 'దిగుబడి అంచనా', nav_recommend: 'పంట సిఫారసు', nav_voice: 'AI వాయిస్ ఏజెంట్' },
+            'ta': { nav_home: 'முகப்பு', nav_yield: 'விளைச்சல் கணிப்பு', nav_recommend: 'பயிர் பரிந்துரை', nav_voice: 'AI குரல் முகவர்' },
+            'kn': { nav_home: 'ಮುಖಪುಟ', nav_yield: 'ಇಳುವರಿ ಊಹೆ', nav_recommend: 'ಬೆಳೆ ಶಿಫಾರಸು', nav_voice: 'AI ಧ್ವನಿ ಏಜೆಂಟ್' }
+        };
+        const siteLanguageNames = { 'en': 'English', 'hi': 'हिंदी', 'mr': 'मराठी', 'te': 'తెలుగు', 'ta': 'தமிழ்', 'kn': 'ಕನ್ನಡ' };
+        
+        function toggleLangDropdownHeader() { document.getElementById('langDropdownHeader').classList.toggle('active'); }
+        document.addEventListener('click', (e) => { if (!e.target.closest('#langBtnHeader') && !e.target.closest('#langDropdownHeader')) document.getElementById('langDropdownHeader').classList.remove('active'); });
+        
+        function selectSiteLanguage(lang) {
+            localStorage.setItem('siteLanguage', lang);
+            const trans = siteTranslations[lang] || siteTranslations['en'];
+            document.querySelectorAll('[data-i18n]').forEach(el => { const key = el.getAttribute('data-i18n'); if (trans[key]) el.textContent = trans[key]; });
+            document.getElementById('currentLangHeader').textContent = siteLanguageNames[lang];
+            document.getElementById('langDropdownHeader').classList.remove('active');
+            // Also update the chat language
+            changeLanguage(lang);
+        }
+        
+        // Initialize site language on load
+        (function() {
+            const savedLang = localStorage.getItem('siteLanguage') || 'en';
+            const trans = siteTranslations[savedLang] || siteTranslations['en'];
+            document.querySelectorAll('[data-i18n]').forEach(el => { const key = el.getAttribute('data-i18n'); if (trans[key]) el.textContent = trans[key]; });
+            if (document.getElementById('currentLangHeader')) document.getElementById('currentLangHeader').textContent = siteLanguageNames[savedLang];
+        })();
         
         function toggleMobileMenu() {
             document.getElementById('mobileMenu').classList.toggle('active');
