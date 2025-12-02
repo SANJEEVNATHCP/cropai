@@ -3,6 +3,7 @@ Vercel Serverless Function Entry Point
 """
 import os
 import sys
+from datetime import datetime, timedelta
 
 # Get the parent directory (project root)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -15,6 +16,10 @@ os.environ.setdefault('FLASK_ENV', 'production')
 
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+import requests as http_requests
+import jwt
 
 # Initialize Flask app with templates and static in parent directory
 app = Flask(__name__, 
@@ -33,7 +38,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 CORS(app, origins=['*'], supports_credentials=True)
 
 # Initialize database
-from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy(app)
 
 # Define models inline for Vercel
@@ -103,8 +107,6 @@ def voice_agent_page():
 
 
 # ============= YIELD PREDICTION API =============
-import requests as http_requests
-from datetime import datetime, timedelta
 
 # NASA POWER API for satellite soil and weather data
 NASA_POWER_BASE_URL = "https://power.larc.nasa.gov/api/temporal/daily/point"
@@ -649,10 +651,6 @@ Focus on farming, crops, weather, and agricultural advice for Indian farmers."""
 
 
 # ============= AUTH API =============
-from werkzeug.security import generate_password_hash, check_password_hash
-import jwt
-from datetime import datetime, timedelta
-
 users_db = {}
 
 @app.route('/api/auth/register', methods=['POST'])
