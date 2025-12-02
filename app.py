@@ -6,27 +6,28 @@ With LiveKit Integration for Expert Consultations
 
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
 import os
 import sys
 from dotenv import load_dotenv
 
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 # Load environment variables
 load_dotenv()
 
+# Get the directory where this file is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Initialize Flask app
 app = Flask(__name__, 
-            template_folder='../frontend/templates',
-            static_folder='../frontend/static')
+            template_folder=BASE_DIR,
+            static_folder=BASE_DIR)
 
 # Configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'crop-yield-secret-key-2025')
 app.config['DEBUG'] = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
 
 # Database configuration
-db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'database', 'cropyield.db')
+db_path = os.path.join(BASE_DIR, 'database', 'cropyield.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', f'sqlite:///{db_path}')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -35,8 +36,7 @@ allowed_origins = os.getenv('ALLOWED_ORIGINS', '*').split(',')
 CORS(app, origins=allowed_origins, supports_credentials=True)
 
 # Initialize database
-from backend.models import db
-db.init_app(app)
+db = SQLAlchemy(app)
 
 # Create tables
 with app.app_context():
@@ -46,20 +46,27 @@ with app.app_context():
     db.create_all()
     print("✅ Database initialized")
 
-# Register blueprints
-from backend.routes.yield_prediction import yield_bp
-from backend.routes.crop_recommendation import recommendation_bp
-from backend.routes.voice_agent import voice_agent_bp
-from backend.routes.auth import auth_bp
-from backend.routes.weather import weather_bp
+# Import and register blueprints from local files
+from yield_prediction import yield_bp
+from crop_recommendation import recommendation_bp
+from voice_agent import voice_agent_bp
+from auth import auth_bp
+from weather import weather_bp
+from livekit_routes import livekit_bp
 
 app.register_blueprint(yield_bp, url_prefix='/api/yield')
 app.register_blueprint(recommendation_bp, url_prefix='/api/recommend')
 app.register_blueprint(voice_agent_bp, url_prefix='/api/voice')
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(weather_bp, url_prefix='/api/weather')
+app.register_blueprint(livekit_bp, url_prefix='/api/livekit')
 
 print("✅ All routes registered")
+
+# Static files
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(BASE_DIR, filename)
 
 # Root route
 @app.route('/')

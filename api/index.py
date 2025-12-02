@@ -4,8 +4,8 @@ Vercel Serverless Function Entry Point
 import os
 import sys
 
-# Get the directory where this file is located
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Get the parent directory (project root)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Add to Python path
 sys.path.insert(0, BASE_DIR)
@@ -16,7 +16,7 @@ os.environ.setdefault('FLASK_ENV', 'production')
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 
-# Initialize Flask app with templates and static in same directory
+# Initialize Flask app with templates and static in parent directory
 app = Flask(__name__, 
             template_folder=BASE_DIR,
             static_folder=BASE_DIR)
@@ -68,7 +68,17 @@ with app.app_context():
 # Static files
 @app.route('/static/<path:filename>')
 def serve_static(filename):
-    return send_from_directory(app.static_folder, filename)
+    return send_from_directory(BASE_DIR, filename)
+
+# Serve app.js
+@app.route('/app.js')
+def serve_app_js():
+    return send_from_directory(BASE_DIR, 'app.js')
+
+# Serve style.css
+@app.route('/style.css')
+def serve_style_css():
+    return send_from_directory(BASE_DIR, 'style.css')
 
 # Page routes
 @app.route('/')
@@ -137,6 +147,28 @@ def get_crops():
 def get_states():
     return jsonify({'success': True, 'states': STATES})
 
+@app.route('/api/yield/weather/<state>', methods=['GET'])
+def get_yield_weather(state):
+    """Get live weather for yield prediction"""
+    city = STATE_CAPITALS.get(state, 'Delhi')
+    try:
+        url = f"https://api.openweathermap.org/data/2.5/weather?q={city},IN&appid={OPENWEATHER_API_KEY}&units=metric"
+        response = http_requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            return jsonify({
+                'success': True,
+                'weather': {
+                    'temperature': data['main']['temp'],
+                    'humidity': data['main']['humidity'],
+                    'description': data['weather'][0]['description'],
+                    'city': city
+                }
+            })
+    except:
+        pass
+    return jsonify({'success': False, 'error': 'Weather data not available'})
+
 @app.route('/api/yield/predict', methods=['POST'])
 def predict_yield():
     try:
@@ -191,9 +223,42 @@ def predict_yield():
 
 
 # ============= RECOMMENDATION API =============
+CROPS_DATABASE = {
+    'rice': {'season': ['Kharif'], 'water_need': 'High', 'investment_per_ha': 45000, 'expected_revenue': 75000, 'duration_days': 120, 'risk_level': 'Low'},
+    'wheat': {'season': ['Rabi'], 'water_need': 'Medium', 'investment_per_ha': 35000, 'expected_revenue': 65000, 'duration_days': 130, 'risk_level': 'Low'},
+    'maize': {'season': ['Kharif', 'Rabi'], 'water_need': 'Medium', 'investment_per_ha': 30000, 'expected_revenue': 55000, 'duration_days': 100, 'risk_level': 'Medium'},
+    'cotton': {'season': ['Kharif'], 'water_need': 'Medium', 'investment_per_ha': 50000, 'expected_revenue': 90000, 'duration_days': 180, 'risk_level': 'Medium'},
+    'sugarcane': {'season': ['Kharif', 'Rabi'], 'water_need': 'High', 'investment_per_ha': 80000, 'expected_revenue': 180000, 'duration_days': 365, 'risk_level': 'Low'},
+    'potato': {'season': ['Rabi'], 'water_need': 'High', 'investment_per_ha': 100000, 'expected_revenue': 200000, 'duration_days': 90, 'risk_level': 'High'},
+    'tomato': {'season': ['Kharif', 'Rabi', 'Zaid'], 'water_need': 'High', 'investment_per_ha': 150000, 'expected_revenue': 350000, 'duration_days': 90, 'risk_level': 'High'},
+    'onion': {'season': ['Kharif', 'Rabi'], 'water_need': 'Medium', 'investment_per_ha': 80000, 'expected_revenue': 180000, 'duration_days': 120, 'risk_level': 'High'},
+}
+
 @app.route('/api/recommend/states', methods=['GET'])
 def recommend_states():
     return jsonify({'success': True, 'states': STATES})
+
+@app.route('/api/recommend/weather/<state>', methods=['GET'])
+def get_recommend_weather(state):
+    """Get live weather for recommendations"""
+    city = STATE_CAPITALS.get(state, 'Delhi')
+    try:
+        url = f"https://api.openweathermap.org/data/2.5/weather?q={city},IN&appid={OPENWEATHER_API_KEY}&units=metric"
+        response = http_requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            return jsonify({
+                'success': True,
+                'weather': {
+                    'temperature': data['main']['temp'],
+                    'humidity': data['main']['humidity'],
+                    'description': data['weather'][0]['description'],
+                    'city': city
+                }
+            })
+    except:
+        pass
+    return jsonify({'success': False, 'error': 'Weather data not available'})
 
 @app.route('/api/recommend/get', methods=['POST'])
 def get_recommendations():
@@ -201,28 +266,34 @@ def get_recommendations():
         data = request.get_json()
         state = data.get('state', 'Punjab')
         season = data.get('season', 'Kharif')
+        farm_size = float(data.get('farm_size', 1))
         
         recommendations = []
-        for crop_name, crop_info in list(CROP_DATA.items())[:5]:
+        for crop_name, crop_info in CROPS_DATABASE.items():
             score = 85 if season in crop_info['season'] else 65
+            profit = crop_info['expected_revenue'] - crop_info['investment_per_ha']
+            roi = round((profit / crop_info['investment_per_ha']) * 100, 1)
+            
             recommendations.append({
                 'crop': crop_name.title(),
                 'score': score,
                 'suitability': 'Excellent' if score >= 80 else 'Good',
                 'reasons': [f'Suitable for {season} season', f'Good yield potential in {state}'],
                 'financials': {
-                    'investment_per_ha': 25000,
-                    'expected_profit_per_ha': 35000,
-                    'roi_percent': 140
+                    'investment_per_ha': crop_info['investment_per_ha'],
+                    'expected_profit_per_ha': profit,
+                    'roi_percent': roi,
+                    'total_investment': int(crop_info['investment_per_ha'] * farm_size),
+                    'total_profit': int(profit * farm_size)
                 },
                 'details': {
-                    'duration_days': 120,
+                    'duration_days': crop_info['duration_days'],
                     'water_need': crop_info['water_need'],
-                    'risk_level': 'Low'
+                    'risk_level': crop_info['risk_level']
                 }
             })
         
-        return jsonify({'success': True, 'recommendations': sorted(recommendations, key=lambda x: x['score'], reverse=True)})
+        return jsonify({'success': True, 'recommendations': sorted(recommendations, key=lambda x: x['score'], reverse=True)[:5]})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -264,6 +335,11 @@ def get_alerts():
 @app.route('/api/weather/advice', methods=['GET'])
 def get_advice():
     return jsonify({'success': True, 'advice': [{'category': 'Irrigation', 'message': 'Good day for irrigation', 'priority': 'medium'}]})
+
+@app.route('/api/weather/cities', methods=['GET'])
+def get_cities():
+    cities = [{'name': city, 'state': state} for state, city in STATE_CAPITALS.items()]
+    return jsonify({'success': True, 'cities': cities})
 
 
 # ============= VOICE AGENT API =============

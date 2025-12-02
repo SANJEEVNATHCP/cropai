@@ -1,7 +1,5 @@
 // API Configuration
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000' 
-    : 'https://your-app.railway.app';
+const API_BASE_URL = window.location.origin;
 
 // State
 let currentUser = null;

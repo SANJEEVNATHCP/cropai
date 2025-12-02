@@ -8,6 +8,14 @@
   ],
   "routes": [
     {
+      "src": "/app.js",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/style.css",
+      "dest": "/api/index.py"
+    },
+    {
       "src": "/static/(.*)",
       "dest": "/api/index.py"
     },
