@@ -26,6 +26,10 @@
         /* Mobile menu */
         .mobile-menu { display: none; }
         .mobile-menu.active { display: block; }
+        /* Language dropdown */
+        .lang-dropdown { display: none; }
+        .lang-dropdown.active { display: block; }
+        .lang-option:hover { background: #f0fdf4; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -37,13 +41,58 @@
                 <h1 class="text-2xl font-bold">CropYield<span class="text-yellow-300">AI</span></h1>
             </div>
             <nav class="hidden md:flex space-x-6">
-                <a href="/yield" class="hover:text-yellow-300 transition">Yield Prediction</a>
-                <a href="/recommendation" class="hover:text-yellow-300 transition">Crop Recommendation</a>
-                <a href="/voice-agent" class="hover:text-yellow-300 transition">AI Voice Agent</a>
+                <a href="/yield" class="hover:text-yellow-300 transition" data-i18n="nav_yield">Yield Prediction</a>
+                <a href="/recommendation" class="hover:text-yellow-300 transition" data-i18n="nav_recommend">Crop Recommendation</a>
+                <a href="/voice-agent" class="hover:text-yellow-300 transition" data-i18n="nav_voice">AI Voice Agent</a>
             </nav>
-            <div class="hidden md:flex space-x-3">
-                <button id="loginBtn" class="px-4 py-2 border border-white rounded-lg hover:bg-white hover:text-green-700 transition">Login</button>
-                <button id="signupBtn" class="px-4 py-2 bg-yellow-400 text-green-900 rounded-lg font-semibold hover:bg-yellow-300 transition">Sign Up</button>
+            <div class="flex items-center space-x-3">
+                <!-- Language Selector -->
+                <div class="relative">
+                    <button id="langBtn" onclick="toggleLangDropdown()" class="flex items-center space-x-1 bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg transition">
+                        <span>🌐</span>
+                        <span id="currentLang" class="hidden sm:inline text-sm">English</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div id="langDropdown" class="lang-dropdown absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl py-2 z-50 max-h-80 overflow-y-auto">
+                        <button onclick="changeLanguage('en')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center">
+                            <span>English</span><span class="text-xs text-gray-400">English</span>
+                        </button>
+                        <button onclick="changeLanguage('hi')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center">
+                            <span>हिंदी</span><span class="text-xs text-gray-400">Hindi</span>
+                        </button>
+                        <button onclick="changeLanguage('mr')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center">
+                            <span>मराठी</span><span class="text-xs text-gray-400">Marathi</span>
+                        </button>
+                        <button onclick="changeLanguage('te')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center">
+                            <span>తెలుగు</span><span class="text-xs text-gray-400">Telugu</span>
+                        </button>
+                        <button onclick="changeLanguage('ta')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center">
+                            <span>தமிழ்</span><span class="text-xs text-gray-400">Tamil</span>
+                        </button>
+                        <button onclick="changeLanguage('kn')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center">
+                            <span>ಕನ್ನಡ</span><span class="text-xs text-gray-400">Kannada</span>
+                        </button>
+                        <button onclick="changeLanguage('bn')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center">
+                            <span>বাংলা</span><span class="text-xs text-gray-400">Bengali</span>
+                        </button>
+                        <button onclick="changeLanguage('gu')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center">
+                            <span>ગુજરાતી</span><span class="text-xs text-gray-400">Gujarati</span>
+                        </button>
+                        <button onclick="changeLanguage('pa')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center">
+                            <span>ਪੰਜਾਬੀ</span><span class="text-xs text-gray-400">Punjabi</span>
+                        </button>
+                        <button onclick="changeLanguage('or')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center">
+                            <span>ଓଡ଼ିଆ</span><span class="text-xs text-gray-400">Odia</span>
+                        </button>
+                        <button onclick="changeLanguage('ml')" class="lang-option w-full px-4 py-2 text-left text-gray-700 flex justify-between items-center">
+                            <span>മലയാളം</span><span class="text-xs text-gray-400">Malayalam</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="hidden md:flex space-x-3">
+                    <button id="loginBtn" class="px-4 py-2 border border-white rounded-lg hover:bg-white hover:text-green-700 transition" data-i18n="login">Login</button>
+                    <button id="signupBtn" class="px-4 py-2 bg-yellow-400 text-green-900 rounded-lg font-semibold hover:bg-yellow-300 transition" data-i18n="signup">Sign Up</button>
+                </div>
             </div>
             <!-- Mobile Menu Button -->
             <button id="mobileMenuBtn" onclick="toggleMobileMenu()" class="md:hidden text-white p-2">
@@ -55,13 +104,13 @@
         <!-- Mobile Menu -->
         <div id="mobileMenu" class="mobile-menu md:hidden bg-green-800 px-4 py-3">
             <nav class="flex flex-col space-y-3">
-                <a href="/yield" class="text-white hover:text-yellow-300 py-2">📊 Yield Prediction</a>
-                <a href="/recommendation" class="text-white hover:text-yellow-300 py-2">🌱 Crop Recommendation</a>
-                <a href="/voice-agent" class="text-white hover:text-yellow-300 py-2">🎙️ AI Voice Agent</a>
-                <a href="/weather" class="text-white hover:text-yellow-300 py-2">🌤️ Weather</a>
+                <a href="/yield" class="text-white hover:text-yellow-300 py-2" data-i18n="nav_yield_mobile">📊 Yield Prediction</a>
+                <a href="/recommendation" class="text-white hover:text-yellow-300 py-2" data-i18n="nav_recommend_mobile">🌱 Crop Recommendation</a>
+                <a href="/voice-agent" class="text-white hover:text-yellow-300 py-2" data-i18n="nav_voice_mobile">🎙️ AI Voice Agent</a>
+                <a href="/weather" class="text-white hover:text-yellow-300 py-2" data-i18n="nav_weather_mobile">🌤️ Weather</a>
                 <div class="flex space-x-3 pt-2 border-t border-green-600">
-                    <button onclick="showLogin(); openModal('authModal'); toggleMobileMenu();" class="flex-1 px-4 py-2 border border-white text-white rounded-lg">Login</button>
-                    <button onclick="showSignup(); openModal('authModal'); toggleMobileMenu();" class="flex-1 px-4 py-2 bg-yellow-400 text-green-900 rounded-lg font-semibold">Sign Up</button>
+                    <button onclick="showLogin(); openModal('authModal'); toggleMobileMenu();" class="flex-1 px-4 py-2 border border-white text-white rounded-lg" data-i18n="login">Login</button>
+                    <button onclick="showSignup(); openModal('authModal'); toggleMobileMenu();" class="flex-1 px-4 py-2 bg-yellow-400 text-green-900 rounded-lg font-semibold" data-i18n="signup">Sign Up</button>
                 </div>
             </nav>
         </div>
@@ -70,26 +119,26 @@
     <!-- Hero Section -->
     <section class="gradient-bg text-white py-10 md:py-20">
         <div class="container mx-auto px-4 text-center">
-            <h2 class="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 md:mb-6">AI-Powered Crop Yield Prediction</h2>
-            <p class="text-base md:text-xl text-green-100 max-w-2xl mx-auto mb-6 md:mb-10 px-2">
+            <h2 class="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 md:mb-6" data-i18n="hero_title">AI-Powered Crop Yield Prediction</h2>
+            <p class="text-base md:text-xl text-green-100 max-w-2xl mx-auto mb-6 md:mb-10 px-2" data-i18n="hero_subtitle">
                 Get accurate yield predictions and personalized crop recommendations
             </p>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 max-w-3xl mx-auto">
                 <div class="glass rounded-xl p-4 md:p-6">
                     <div class="text-2xl md:text-4xl font-bold text-yellow-300">95%</div>
-                    <div class="text-xs md:text-base text-green-100">Accuracy</div>
+                    <div class="text-xs md:text-base text-green-100" data-i18n="stat_accuracy">Accuracy</div>
                 </div>
                 <div class="glass rounded-xl p-4 md:p-6">
                     <div class="text-2xl md:text-4xl font-bold text-yellow-300">20+</div>
-                    <div class="text-xs md:text-base text-green-100">Crops</div>
+                    <div class="text-xs md:text-base text-green-100" data-i18n="stat_crops">Crops</div>
                 </div>
                 <div class="glass rounded-xl p-4 md:p-6">
                     <div class="text-2xl md:text-4xl font-bold text-yellow-300">15</div>
-                    <div class="text-xs md:text-base text-green-100">States</div>
+                    <div class="text-xs md:text-base text-green-100" data-i18n="stat_states">States</div>
                 </div>
                 <div class="glass rounded-xl p-4 md:p-6">
                     <div class="text-2xl md:text-4xl font-bold">🤖</div>
-                    <div class="text-xs md:text-base text-green-100">AI Agent</div>
+                    <div class="text-xs md:text-base text-green-100" data-i18n="stat_ai">AI Agent</div>
                 </div>
             </div>
         </div>
@@ -102,9 +151,9 @@
             <!-- Yield Prediction Card -->
             <div id="yield" class="bg-white rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6 hover:shadow-2xl transition transform hover:-translate-y-1 md:hover:-translate-y-2">
                 <div class="text-3xl md:text-5xl mb-2 md:mb-4">📊</div>
-                <h3 class="text-sm md:text-xl font-bold text-gray-800 mb-1 md:mb-2">Yield Prediction</h3>
-                <p class="text-gray-600 mb-3 md:mb-4 text-xs md:text-sm hidden md:block">Predict your crop yield based on soil and weather</p>
-                <a href="/yield" class="block w-full py-2 md:py-3 bg-green-600 text-white text-center rounded-lg md:rounded-xl font-semibold text-xs md:text-base hover:bg-green-700 transition">
+                <h3 class="text-sm md:text-xl font-bold text-gray-800 mb-1 md:mb-2" data-i18n="card_yield_title">Yield Prediction</h3>
+                <p class="text-gray-600 mb-3 md:mb-4 text-xs md:text-sm hidden md:block" data-i18n="card_yield_desc">Predict your crop yield based on soil and weather</p>
+                <a href="/yield" class="block w-full py-2 md:py-3 bg-green-600 text-white text-center rounded-lg md:rounded-xl font-semibold text-xs md:text-base hover:bg-green-700 transition" data-i18n="btn_predict">
                     🔮 Predict
                 </a>
             </div>
@@ -112,9 +161,9 @@
             <!-- Crop Recommendation Card -->
             <div id="recommend" class="bg-white rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6 hover:shadow-2xl transition transform hover:-translate-y-1 md:hover:-translate-y-2">
                 <div class="text-3xl md:text-5xl mb-2 md:mb-4">🌱</div>
-                <h3 class="text-sm md:text-xl font-bold text-gray-800 mb-1 md:mb-2">Crop Tips</h3>
-                <p class="text-gray-600 mb-3 md:mb-4 text-xs md:text-sm hidden md:block">Get personalized crop suggestions for your farm</p>
-                <a href="/recommendation" class="block w-full py-2 md:py-3 bg-green-600 text-white text-center rounded-lg md:rounded-xl font-semibold text-xs md:text-base hover:bg-green-700 transition">
+                <h3 class="text-sm md:text-xl font-bold text-gray-800 mb-1 md:mb-2" data-i18n="card_recommend_title">Crop Tips</h3>
+                <p class="text-gray-600 mb-3 md:mb-4 text-xs md:text-sm hidden md:block" data-i18n="card_recommend_desc">Get personalized crop suggestions for your farm</p>
+                <a href="/recommendation" class="block w-full py-2 md:py-3 bg-green-600 text-white text-center rounded-lg md:rounded-xl font-semibold text-xs md:text-base hover:bg-green-700 transition" data-i18n="btn_recommend">
                     🌱 Recommend
                 </a>
             </div>
@@ -122,9 +171,9 @@
             <!-- Weather Card -->
             <div class="bg-white rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6 hover:shadow-2xl transition transform hover:-translate-y-1 md:hover:-translate-y-2">
                 <div class="text-3xl md:text-5xl mb-2 md:mb-4">🌤️</div>
-                <h3 class="text-sm md:text-xl font-bold text-gray-800 mb-1 md:mb-2">Weather</h3>
-                <p class="text-gray-600 mb-3 md:mb-4 text-xs md:text-sm hidden md:block">Real-time weather updates with farming advice</p>
-                <a href="/weather" class="block w-full py-2 md:py-3 bg-blue-600 text-white text-center rounded-lg md:rounded-xl font-semibold text-xs md:text-base hover:bg-blue-700 transition">
+                <h3 class="text-sm md:text-xl font-bold text-gray-800 mb-1 md:mb-2" data-i18n="card_weather_title">Weather</h3>
+                <p class="text-gray-600 mb-3 md:mb-4 text-xs md:text-sm hidden md:block" data-i18n="card_weather_desc">Real-time weather updates with farming advice</p>
+                <a href="/weather" class="block w-full py-2 md:py-3 bg-blue-600 text-white text-center rounded-lg md:rounded-xl font-semibold text-xs md:text-base hover:bg-blue-700 transition" data-i18n="btn_weather">
                     🌡️ Check
                 </a>
             </div>
@@ -132,9 +181,9 @@
             <!-- AI Voice Agent Card -->
             <div id="experts" class="bg-white rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6 hover:shadow-2xl transition transform hover:-translate-y-1 md:hover:-translate-y-2">
                 <div class="text-3xl md:text-5xl mb-2 md:mb-4">🤖</div>
-                <h3 class="text-sm md:text-xl font-bold text-gray-800 mb-1 md:mb-2">AI Chat</h3>
-                <p class="text-gray-600 mb-3 md:mb-4 text-xs md:text-sm hidden md:block">Chat with AI for instant farming advice</p>
-                <a href="/voice-agent" class="block w-full py-2 md:py-3 bg-green-600 text-white text-center rounded-lg md:rounded-xl font-semibold text-xs md:text-base hover:bg-green-700 transition">
+                <h3 class="text-sm md:text-xl font-bold text-gray-800 mb-1 md:mb-2" data-i18n="card_ai_title">AI Chat</h3>
+                <p class="text-gray-600 mb-3 md:mb-4 text-xs md:text-sm hidden md:block" data-i18n="card_ai_desc">Chat with AI for instant farming advice</p>
+                <a href="/voice-agent" class="block w-full py-2 md:py-3 bg-green-600 text-white text-center rounded-lg md:rounded-xl font-semibold text-xs md:text-base hover:bg-green-700 transition" data-i18n="btn_chat">
                     💬 Chat
                 </a>
             </div>
@@ -211,17 +260,438 @@
     <!-- Footer -->
     <footer class="gradient-bg text-white py-8 mt-16">
         <div class="container mx-auto px-4 text-center">
-            <p class="text-lg">🌾 CropYield AI - Empowering Farmers with AI | © 2025</p>
+            <p class="text-lg" data-i18n="footer_text">🌾 CropYield AI - Empowering Farmers with AI | © 2025</p>
             <div class="flex justify-center space-x-6 mt-4 text-green-200">
-                <a href="#" class="hover:text-white transition">About</a>
-                <a href="#" class="hover:text-white transition">Contact</a>
-                <a href="#" class="hover:text-white transition">Privacy</a>
+                <a href="#" class="hover:text-white transition" data-i18n="footer_about">About</a>
+                <a href="#" class="hover:text-white transition" data-i18n="footer_contact">Contact</a>
+                <a href="#" class="hover:text-white transition" data-i18n="footer_privacy">Privacy</a>
             </div>
         </div>
     </footer>
 
     <script src="/app.js"></script>
     <script>
+        // Multi-language translations
+        const translations = {
+            'en': {
+                nav_yield: 'Yield Prediction',
+                nav_recommend: 'Crop Recommendation',
+                nav_voice: 'AI Voice Agent',
+                nav_yield_mobile: '📊 Yield Prediction',
+                nav_recommend_mobile: '🌱 Crop Recommendation',
+                nav_voice_mobile: '🎙️ AI Voice Agent',
+                nav_weather_mobile: '🌤️ Weather',
+                login: 'Login',
+                signup: 'Sign Up',
+                hero_title: 'AI-Powered Crop Yield Prediction',
+                hero_subtitle: 'Get accurate yield predictions and personalized crop recommendations',
+                stat_accuracy: 'Accuracy',
+                stat_crops: 'Crops',
+                stat_states: 'States',
+                stat_ai: 'AI Agent',
+                card_yield_title: 'Yield Prediction',
+                card_yield_desc: 'Predict your crop yield based on soil and weather',
+                btn_predict: '🔮 Predict',
+                card_recommend_title: 'Crop Tips',
+                card_recommend_desc: 'Get personalized crop suggestions for your farm',
+                btn_recommend: '🌱 Recommend',
+                card_weather_title: 'Weather',
+                card_weather_desc: 'Real-time weather updates with farming advice',
+                btn_weather: '🌡️ Check',
+                card_ai_title: 'AI Chat',
+                card_ai_desc: 'Chat with AI for instant farming advice',
+                btn_chat: '💬 Chat',
+                footer_text: '🌾 CropYield AI - Empowering Farmers with AI | © 2025',
+                footer_about: 'About',
+                footer_contact: 'Contact',
+                footer_privacy: 'Privacy'
+            },
+            'hi': {
+                nav_yield: 'उपज भविष्यवाणी',
+                nav_recommend: 'फसल सिफारिश',
+                nav_voice: 'AI वॉइस एजेंट',
+                nav_yield_mobile: '📊 उपज भविष्यवाणी',
+                nav_recommend_mobile: '🌱 फसल सिफारिश',
+                nav_voice_mobile: '🎙️ AI वॉइस एजेंट',
+                nav_weather_mobile: '🌤️ मौसम',
+                login: 'लॉगिन',
+                signup: 'साइन अप',
+                hero_title: 'AI-संचालित फसल उपज भविष्यवाणी',
+                hero_subtitle: 'सटीक उपज भविष्यवाणी और व्यक्तिगत फसल सिफारिशें प्राप्त करें',
+                stat_accuracy: 'सटीकता',
+                stat_crops: 'फसलें',
+                stat_states: 'राज्य',
+                stat_ai: 'AI एजेंट',
+                card_yield_title: 'उपज भविष्यवाणी',
+                card_yield_desc: 'मिट्टी और मौसम के आधार पर फसल उपज की भविष्यवाणी करें',
+                btn_predict: '🔮 भविष्यवाणी',
+                card_recommend_title: 'फसल सुझाव',
+                card_recommend_desc: 'अपने खेत के लिए व्यक्तिगत फसल सुझाव प्राप्त करें',
+                btn_recommend: '🌱 सिफारिश',
+                card_weather_title: 'मौसम',
+                card_weather_desc: 'खेती सलाह के साथ रीयल-टाइम मौसम अपडेट',
+                btn_weather: '🌡️ जांचें',
+                card_ai_title: 'AI चैट',
+                card_ai_desc: 'तुरंत खेती सलाह के लिए AI से बात करें',
+                btn_chat: '💬 चैट',
+                footer_text: '🌾 CropYield AI - AI से किसानों को सशक्त बनाना | © 2025',
+                footer_about: 'हमारे बारे में',
+                footer_contact: 'संपर्क',
+                footer_privacy: 'गोपनीयता'
+            },
+            'mr': {
+                nav_yield: 'उत्पादन अंदाज',
+                nav_recommend: 'पीक शिफारस',
+                nav_voice: 'AI व्हॉइस एजंट',
+                nav_yield_mobile: '📊 उत्पादन अंदाज',
+                nav_recommend_mobile: '🌱 पीक शिफारस',
+                nav_voice_mobile: '🎙️ AI व्हॉइस एजंट',
+                nav_weather_mobile: '🌤️ हवामान',
+                login: 'लॉगिन',
+                signup: 'साइन अप',
+                hero_title: 'AI-चालित पीक उत्पादन अंदाज',
+                hero_subtitle: 'अचूक उत्पादन अंदाज आणि वैयक्तिक पीक शिफारशी मिळवा',
+                stat_accuracy: 'अचूकता',
+                stat_crops: 'पिके',
+                stat_states: 'राज्ये',
+                stat_ai: 'AI एजंट',
+                card_yield_title: 'उत्पादन अंदाज',
+                card_yield_desc: 'माती आणि हवामानावर आधारित पीक उत्पादनाचा अंदाज',
+                btn_predict: '🔮 अंदाज',
+                card_recommend_title: 'पीक सूचना',
+                card_recommend_desc: 'तुमच्या शेतासाठी वैयक्तिक पीक सूचना',
+                btn_recommend: '🌱 शिफारस',
+                card_weather_title: 'हवामान',
+                card_weather_desc: 'शेती सल्ल्यासह रिअल-टाइम हवामान',
+                btn_weather: '🌡️ तपासा',
+                card_ai_title: 'AI चॅट',
+                card_ai_desc: 'त्वरित शेती सल्ल्यासाठी AI शी बोला',
+                btn_chat: '💬 चॅट',
+                footer_text: '🌾 CropYield AI - AI सह शेतकऱ्यांना सक्षम करणे | © 2025',
+                footer_about: 'आमच्याबद्दल',
+                footer_contact: 'संपर्क',
+                footer_privacy: 'गोपनीयता'
+            },
+            'te': {
+                nav_yield: 'దిగుబడి అంచనా',
+                nav_recommend: 'పంట సిఫారసు',
+                nav_voice: 'AI వాయిస్ ఏజెంట్',
+                nav_yield_mobile: '📊 దిగుబడి అంచనా',
+                nav_recommend_mobile: '🌱 పంట సిఫారసు',
+                nav_voice_mobile: '🎙️ AI వాయిస్ ఏజెంట్',
+                nav_weather_mobile: '🌤️ వాతావరణం',
+                login: 'లాగిన్',
+                signup: 'సైన్ అప్',
+                hero_title: 'AI-ఆధారిత పంట దిగుబడి అంచనా',
+                hero_subtitle: 'ఖచ్చితమైన దిగుబడి అంచనాలు మరియు వ్యక్తిగత పంట సిఫారసులు పొందండి',
+                stat_accuracy: 'ఖచ్చితత్వం',
+                stat_crops: 'పంటలు',
+                stat_states: 'రాష్ట్రాలు',
+                stat_ai: 'AI ఏజెంట్',
+                card_yield_title: 'దిగుబడి అంచనా',
+                card_yield_desc: 'నేల మరియు వాతావరణం ఆధారంగా పంట దిగుబడిని అంచనా వేయండి',
+                btn_predict: '🔮 అంచనా',
+                card_recommend_title: 'పంట చిట్కాలు',
+                card_recommend_desc: 'మీ పొలానికి వ్యక్తిగత పంట సూచనలు',
+                btn_recommend: '🌱 సిఫారసు',
+                card_weather_title: 'వాతావరణం',
+                card_weather_desc: 'వ్యవసాయ సలహాతో రియల్-టైమ్ వాతావరణం',
+                btn_weather: '🌡️ చెక్',
+                card_ai_title: 'AI చాట్',
+                card_ai_desc: 'తక్షణ వ్యవసాయ సలహా కోసం AI తో మాట్లాడండి',
+                btn_chat: '💬 చాట్',
+                footer_text: '🌾 CropYield AI - AI తో రైతులను శక్తివంతం చేయడం | © 2025',
+                footer_about: 'గురించి',
+                footer_contact: 'సంప్రదించండి',
+                footer_privacy: 'గోప్యత'
+            },
+            'ta': {
+                nav_yield: 'விளைச்சல் கணிப்பு',
+                nav_recommend: 'பயிர் பரிந்துரை',
+                nav_voice: 'AI குரல் முகவர்',
+                nav_yield_mobile: '📊 விளைச்சல் கணிப்பு',
+                nav_recommend_mobile: '🌱 பயிர் பரிந்துரை',
+                nav_voice_mobile: '🎙️ AI குரல் முகவர்',
+                nav_weather_mobile: '🌤️ வானிலை',
+                login: 'உள்நுழை',
+                signup: 'பதிவு செய்',
+                hero_title: 'AI-இயக்கப்படும் பயிர் விளைச்சல் கணிப்பு',
+                hero_subtitle: 'துல்லியமான விளைச்சல் கணிப்புகள் மற்றும் தனிப்பயன் பயிர் பரிந்துரைகளைப் பெறுங்கள்',
+                stat_accuracy: 'துல்லியம்',
+                stat_crops: 'பயிர்கள்',
+                stat_states: 'மாநிலங்கள்',
+                stat_ai: 'AI முகவர்',
+                card_yield_title: 'விளைச்சல் கணிப்பு',
+                card_yield_desc: 'மண் மற்றும் வானிலை அடிப்படையில் பயிர் விளைச்சலை கணிக்கவும்',
+                btn_predict: '🔮 கணிப்பு',
+                card_recommend_title: 'பயிர் குறிப்புகள்',
+                card_recommend_desc: 'உங்கள் பண்ணைக்கு தனிப்பயன் பயிர் பரிந்துரைகள்',
+                btn_recommend: '🌱 பரிந்துரை',
+                card_weather_title: 'வானிலை',
+                card_weather_desc: 'விவசாய ஆலோசனையுடன் நேரடி வானிலை',
+                btn_weather: '🌡️ சரிபார்',
+                card_ai_title: 'AI அரட்டை',
+                card_ai_desc: 'உடனடி விவசாய ஆலோசனைக்கு AI உடன் பேசுங்கள்',
+                btn_chat: '💬 அரட்டை',
+                footer_text: '🌾 CropYield AI - AI மூலம் விவசாயிகளை வலுப்படுத்துதல் | © 2025',
+                footer_about: 'பற்றி',
+                footer_contact: 'தொடர்பு',
+                footer_privacy: 'தனியுரிமை'
+            },
+            'kn': {
+                nav_yield: 'ಇಳುವರಿ ಊಹೆ',
+                nav_recommend: 'ಬೆಳೆ ಶಿಫಾರಸು',
+                nav_voice: 'AI ಧ್ವನಿ ಏಜೆಂಟ್',
+                nav_yield_mobile: '📊 ಇಳುವರಿ ಊಹೆ',
+                nav_recommend_mobile: '🌱 ಬೆಳೆ ಶಿಫಾರಸು',
+                nav_voice_mobile: '🎙️ AI ಧ್ವನಿ ಏಜೆಂಟ್',
+                nav_weather_mobile: '🌤️ ಹವಾಮಾನ',
+                login: 'ಲಾಗಿನ್',
+                signup: 'ಸೈನ್ ಅಪ್',
+                hero_title: 'AI-ಚಾಲಿತ ಬೆಳೆ ಇಳುವರಿ ಊಹೆ',
+                hero_subtitle: 'ನಿಖರವಾದ ಇಳುವರಿ ಊಹೆಗಳು ಮತ್ತು ವೈಯಕ್ತಿಕ ಬೆಳೆ ಶಿಫಾರಸುಗಳನ್ನು ಪಡೆಯಿರಿ',
+                stat_accuracy: 'ನಿಖರತೆ',
+                stat_crops: 'ಬೆಳೆಗಳು',
+                stat_states: 'ರಾಜ್ಯಗಳು',
+                stat_ai: 'AI ಏಜೆಂಟ್',
+                card_yield_title: 'ಇಳುವರಿ ಊಹೆ',
+                card_yield_desc: 'ಮಣ್ಣು ಮತ್ತು ಹವಾಮಾನದ ಆಧಾರದ ಮೇಲೆ ಬೆಳೆ ಇಳುವರಿಯನ್ನು ಊಹಿಸಿ',
+                btn_predict: '🔮 ಊಹಿಸಿ',
+                card_recommend_title: 'ಬೆಳೆ ಸಲಹೆಗಳು',
+                card_recommend_desc: 'ನಿಮ್ಮ ಕೃಷಿಗೆ ವೈಯಕ್ತಿಕ ಬೆಳೆ ಸಲಹೆಗಳು',
+                btn_recommend: '🌱 ಶಿಫಾರಸು',
+                card_weather_title: 'ಹವಾಮಾನ',
+                card_weather_desc: 'ಕೃಷಿ ಸಲಹೆಯೊಂದಿಗೆ ನೈಜ-ಸಮಯ ಹವಾಮಾನ',
+                btn_weather: '🌡️ ಪರಿಶೀಲಿಸಿ',
+                card_ai_title: 'AI ಚಾಟ್',
+                card_ai_desc: 'ತಕ್ಷಣ ಕೃಷಿ ಸಲಹೆಗಾಗಿ AI ನೊಂದಿಗೆ ಮಾತನಾಡಿ',
+                btn_chat: '💬 ಚಾಟ್',
+                footer_text: '🌾 CropYield AI - AI ನೊಂದಿಗೆ ರೈತರನ್ನು ಸಬಲಗೊಳಿಸುವುದು | © 2025',
+                footer_about: 'ಬಗ್ಗೆ',
+                footer_contact: 'ಸಂಪರ್ಕ',
+                footer_privacy: 'ಗೌಪ್ಯತೆ'
+            },
+            'bn': {
+                nav_yield: 'ফলন পূর্বাভাস',
+                nav_recommend: 'ফসল সুপারিশ',
+                nav_voice: 'AI ভয়েস এজেন্ট',
+                nav_yield_mobile: '📊 ফলন পূর্বাভাস',
+                nav_recommend_mobile: '🌱 ফসল সুপারিশ',
+                nav_voice_mobile: '🎙️ AI ভয়েস এজেন্ট',
+                nav_weather_mobile: '🌤️ আবহাওয়া',
+                login: 'লগইন',
+                signup: 'সাইন আপ',
+                hero_title: 'AI-চালিত ফসল ফলন পূর্বাভাস',
+                hero_subtitle: 'সঠিক ফলন পূর্বাভাস এবং ব্যক্তিগত ফসল সুপারিশ পান',
+                stat_accuracy: 'নির্ভুলতা',
+                stat_crops: 'ফসল',
+                stat_states: 'রাজ্য',
+                stat_ai: 'AI এজেন্ট',
+                card_yield_title: 'ফলন পূর্বাভাস',
+                card_yield_desc: 'মাটি ও আবহাওয়ার উপর ভিত্তি করে ফসল ফলন পূর্বাভাস',
+                btn_predict: '🔮 পূর্বাভাস',
+                card_recommend_title: 'ফসল টিপস',
+                card_recommend_desc: 'আপনার খামারের জন্য ব্যক্তিগত ফসল পরামর্শ',
+                btn_recommend: '🌱 সুপারিশ',
+                card_weather_title: 'আবহাওয়া',
+                card_weather_desc: 'কৃষি পরামর্শ সহ রিয়েল-টাইম আবহাওয়া',
+                btn_weather: '🌡️ চেক',
+                card_ai_title: 'AI চ্যাট',
+                card_ai_desc: 'তাৎক্ষণিক কৃষি পরামর্শের জন্য AI এর সাথে কথা বলুন',
+                btn_chat: '💬 চ্যাট',
+                footer_text: '🌾 CropYield AI - AI দিয়ে কৃষকদের ক্ষমতায়ন | © 2025',
+                footer_about: 'সম্পর্কে',
+                footer_contact: 'যোগাযোগ',
+                footer_privacy: 'গোপনীয়তা'
+            },
+            'gu': {
+                nav_yield: 'ઉપજ આગાહી',
+                nav_recommend: 'પાક ભલામણ',
+                nav_voice: 'AI વૉઇસ એજન્ટ',
+                nav_yield_mobile: '📊 ઉપજ આગાહી',
+                nav_recommend_mobile: '🌱 પાક ભલામણ',
+                nav_voice_mobile: '🎙️ AI વૉઇસ એજન્ટ',
+                nav_weather_mobile: '🌤️ હવામાન',
+                login: 'લૉગિન',
+                signup: 'સાઇન અપ',
+                hero_title: 'AI-સંચાલિત પાક ઉપજ આગાહી',
+                hero_subtitle: 'ચોક્કસ ઉપજ આગાહીઓ અને વ્યક્તિગત પાક ભલામણો મેળવો',
+                stat_accuracy: 'ચોકસાઈ',
+                stat_crops: 'પાક',
+                stat_states: 'રાજ્યો',
+                stat_ai: 'AI એજન્ટ',
+                card_yield_title: 'ઉપજ આગાહી',
+                card_yield_desc: 'માટી અને હવામાનના આધારે પાક ઉપજની આગાહી કરો',
+                btn_predict: '🔮 આગાહી',
+                card_recommend_title: 'પાક ટિપ્સ',
+                card_recommend_desc: 'તમારા ખેતર માટે વ્યક્તિગત પાક સૂચનો',
+                btn_recommend: '🌱 ભલામણ',
+                card_weather_title: 'હવામાન',
+                card_weather_desc: 'ખેતી સલાહ સાથે રીયલ-ટાઇમ હવામાન',
+                btn_weather: '🌡️ તપાસો',
+                card_ai_title: 'AI ચેટ',
+                card_ai_desc: 'તાત્કાલિક ખેતી સલાહ માટે AI સાથે વાત કરો',
+                btn_chat: '💬 ચેટ',
+                footer_text: '🌾 CropYield AI - AI સાથે ખેડૂતોને સશક્ત બનાવવું | © 2025',
+                footer_about: 'વિશે',
+                footer_contact: 'સંપર્ક',
+                footer_privacy: 'ગોપનીયતા'
+            },
+            'pa': {
+                nav_yield: 'ਝਾੜ ਭਵਿੱਖਬਾਣੀ',
+                nav_recommend: 'ਫਸਲ ਸਿਫਾਰਸ਼',
+                nav_voice: 'AI ਵੌਇਸ ਏਜੰਟ',
+                nav_yield_mobile: '📊 ਝਾੜ ਭਵਿੱਖਬਾਣੀ',
+                nav_recommend_mobile: '🌱 ਫਸਲ ਸਿਫਾਰਸ਼',
+                nav_voice_mobile: '🎙️ AI ਵੌਇਸ ਏਜੰਟ',
+                nav_weather_mobile: '🌤️ ਮੌਸਮ',
+                login: 'ਲੌਗਇਨ',
+                signup: 'ਸਾਈਨ ਅੱਪ',
+                hero_title: 'AI-ਸੰਚਾਲਿਤ ਫਸਲ ਝਾੜ ਭਵਿੱਖਬਾਣੀ',
+                hero_subtitle: 'ਸਹੀ ਝਾੜ ਭਵਿੱਖਬਾਣੀਆਂ ਅਤੇ ਨਿੱਜੀ ਫਸਲ ਸਿਫਾਰਸ਼ਾਂ ਪ੍ਰਾਪਤ ਕਰੋ',
+                stat_accuracy: 'ਸ਼ੁੱਧਤਾ',
+                stat_crops: 'ਫਸਲਾਂ',
+                stat_states: 'ਰਾਜ',
+                stat_ai: 'AI ਏਜੰਟ',
+                card_yield_title: 'ਝਾੜ ਭਵਿੱਖਬਾਣੀ',
+                card_yield_desc: 'ਮਿੱਟੀ ਅਤੇ ਮੌਸਮ ਦੇ ਆਧਾਰ ਤੇ ਫਸਲ ਝਾੜ ਦੀ ਭਵਿੱਖਬਾਣੀ',
+                btn_predict: '🔮 ਭਵਿੱਖਬਾਣੀ',
+                card_recommend_title: 'ਫਸਲ ਸੁਝਾਅ',
+                card_recommend_desc: 'ਤੁਹਾਡੇ ਖੇਤ ਲਈ ਨਿੱਜੀ ਫਸਲ ਸੁਝਾਅ',
+                btn_recommend: '🌱 ਸਿਫਾਰਸ਼',
+                card_weather_title: 'ਮੌਸਮ',
+                card_weather_desc: 'ਖੇਤੀ ਸਲਾਹ ਨਾਲ ਰੀਅਲ-ਟਾਈਮ ਮੌਸਮ',
+                btn_weather: '🌡️ ਚੈੱਕ',
+                card_ai_title: 'AI ਚੈਟ',
+                card_ai_desc: 'ਤੁਰੰਤ ਖੇਤੀ ਸਲਾਹ ਲਈ AI ਨਾਲ ਗੱਲ ਕਰੋ',
+                btn_chat: '💬 ਚੈਟ',
+                footer_text: '🌾 CropYield AI - AI ਨਾਲ ਕਿਸਾਨਾਂ ਨੂੰ ਸਸ਼ਕਤ ਕਰਨਾ | © 2025',
+                footer_about: 'ਬਾਰੇ',
+                footer_contact: 'ਸੰਪਰਕ',
+                footer_privacy: 'ਗੋਪਨੀਯਤਾ'
+            },
+            'or': {
+                nav_yield: 'ଅମଳ ପୂର୍ବାନୁମାନ',
+                nav_recommend: 'ଫସଲ ସୁପାରିଶ',
+                nav_voice: 'AI ଭଏସ୍ ଏଜେଣ୍ଟ',
+                nav_yield_mobile: '📊 ଅମଳ ପୂର୍ବାନୁମାନ',
+                nav_recommend_mobile: '🌱 ଫସଲ ସୁପାରିଶ',
+                nav_voice_mobile: '🎙️ AI ଭଏସ୍ ଏଜେଣ୍ଟ',
+                nav_weather_mobile: '🌤️ ପାଣିପାଗ',
+                login: 'ଲଗଇନ୍',
+                signup: 'ସାଇନ୍ ଅପ୍',
+                hero_title: 'AI-ଚାଳିତ ଫସଲ ଅମଳ ପୂର୍ବାନୁମାନ',
+                hero_subtitle: 'ସଠିକ୍ ଅମଳ ପୂର୍ବାନୁମାନ ଏବଂ ବ୍ୟକ୍ତିଗତ ଫସଲ ସୁପାରିଶ ପାଆନ୍ତୁ',
+                stat_accuracy: 'ସଠିକତା',
+                stat_crops: 'ଫସଲ',
+                stat_states: 'ରାଜ୍ୟ',
+                stat_ai: 'AI ଏଜେଣ୍ଟ',
+                card_yield_title: 'ଅମଳ ପୂର୍ବାନୁମାନ',
+                card_yield_desc: 'ମାଟି ଏବଂ ପାଣିପାଗ ଆଧାରରେ ଫସଲ ଅମଳ ପୂର୍ବାନୁମାନ',
+                btn_predict: '🔮 ପୂର୍ବାନୁମାନ',
+                card_recommend_title: 'ଫସଲ ଟିପ୍ସ',
+                card_recommend_desc: 'ଆପଣଙ୍କ ଚାଷ ପାଇଁ ବ୍ୟକ୍ତିଗତ ଫସଲ ପରାମର୍ଶ',
+                btn_recommend: '🌱 ସୁପାରିଶ',
+                card_weather_title: 'ପାଣିପାଗ',
+                card_weather_desc: 'ଚାଷ ପରାମର୍ଶ ସହିତ ରିଅଲ-ଟାଇମ ପାଣିପାଗ',
+                btn_weather: '🌡️ ଯାଞ୍ଚ',
+                card_ai_title: 'AI ଚାଟ୍',
+                card_ai_desc: 'ତୁରନ୍ତ ଚାଷ ପରାମର୍ଶ ପାଇଁ AI ସହ କଥା ହୁଅନ୍ତୁ',
+                btn_chat: '💬 ଚାଟ୍',
+                footer_text: '🌾 CropYield AI - AI ସହ ଚାଷୀଙ୍କୁ ସଶକ୍ତ କରିବା | © 2025',
+                footer_about: 'ବିଷୟରେ',
+                footer_contact: 'ସମ୍ପର୍କ',
+                footer_privacy: 'ଗୋପନୀୟତା'
+            },
+            'ml': {
+                nav_yield: 'വിളവ് പ്രവചനം',
+                nav_recommend: 'വിള ശുപാർശ',
+                nav_voice: 'AI വോയ്സ് ഏജന്റ്',
+                nav_yield_mobile: '📊 വിളവ് പ്രവചനം',
+                nav_recommend_mobile: '🌱 വിള ശുപാർശ',
+                nav_voice_mobile: '🎙️ AI വോയ്സ് ഏജന്റ്',
+                nav_weather_mobile: '🌤️ കാലാവസ്ഥ',
+                login: 'ലോഗിൻ',
+                signup: 'സൈൻ അപ്പ്',
+                hero_title: 'AI-പ്രവർത്തിത വിള വിളവ് പ്രവചനം',
+                hero_subtitle: 'കൃത്യമായ വിളവ് പ്രവചനങ്ങളും വ്യക്തിഗത വിള ശുപാർശകളും നേടുക',
+                stat_accuracy: 'കൃത്യത',
+                stat_crops: 'വിളകൾ',
+                stat_states: 'സംസ്ഥാനങ്ങൾ',
+                stat_ai: 'AI ഏജന്റ്',
+                card_yield_title: 'വിളവ് പ്രവചനം',
+                card_yield_desc: 'മണ്ണിന്റെയും കാലാവസ്ഥയുടെയും അടിസ്ഥാനത്തിൽ വിള വിളവ് പ്രവചിക്കുക',
+                btn_predict: '🔮 പ്രവചനം',
+                card_recommend_title: 'വിള ടിപ്പുകൾ',
+                card_recommend_desc: 'നിങ്ങളുടെ കൃഷിയിടത്തിന് വ്യക്തിഗത വിള നിർദ്ദേശങ്ങൾ',
+                btn_recommend: '🌱 ശുപാർശ',
+                card_weather_title: 'കാലാവസ്ഥ',
+                card_weather_desc: 'കൃഷി ഉപദേശത്തോടൊപ്പം തത്സമയ കാലാവസ്ഥ',
+                btn_weather: '🌡️ പരിശോധിക്കുക',
+                card_ai_title: 'AI ചാറ്റ്',
+                card_ai_desc: 'തൽക്ഷണ കൃഷി ഉപദേശത്തിനായി AI-യുമായി സംസാരിക്കുക',
+                btn_chat: '💬 ചാറ്റ്',
+                footer_text: '🌾 CropYield AI - AI ഉപയോഗിച്ച് കർഷകരെ ശാക്തീകരിക്കുന്നു | © 2025',
+                footer_about: 'കുറിച്ച്',
+                footer_contact: 'ബന്ധപ്പെടുക',
+                footer_privacy: 'സ്വകാര്യത'
+            }
+        };
+
+        const languageNames = {
+            'en': 'English', 'hi': 'हिंदी', 'mr': 'मराठी', 'te': 'తెలుగు',
+            'ta': 'தமிழ்', 'kn': 'ಕನ್ನಡ', 'bn': 'বাংলা', 'gu': 'ગુજરાતી',
+            'pa': 'ਪੰਜਾਬੀ', 'or': 'ଓଡ଼ିଆ', 'ml': 'മലയാളം'
+        };
+
+        let currentLanguage = localStorage.getItem('siteLanguage') || 'en';
+
+        // Initialize language on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            applyLanguage(currentLanguage);
+        });
+
+        function toggleLangDropdown() {
+            document.getElementById('langDropdown').classList.toggle('active');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#langBtn') && !e.target.closest('#langDropdown')) {
+                document.getElementById('langDropdown').classList.remove('active');
+            }
+        });
+
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('siteLanguage', lang);
+            applyLanguage(lang);
+            document.getElementById('langDropdown').classList.remove('active');
+        }
+
+        function applyLanguage(lang) {
+            const trans = translations[lang] || translations['en'];
+            
+            // Update all elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (trans[key]) {
+                    el.textContent = trans[key];
+                }
+            });
+            
+            // Update current language display
+            document.getElementById('currentLang').textContent = languageNames[lang];
+            
+            // Update page title
+            document.title = lang === 'en' ? 'CropYield AI - Smart Crop Prediction' : `CropYield AI - ${trans.hero_title}`;
+            
+            // Highlight current language in dropdown
+            document.querySelectorAll('.lang-option').forEach(btn => {
+                btn.classList.remove('bg-green-50', 'text-green-700');
+            });
+        }
+
         function toggleMobileMenu() {
             document.getElementById('mobileMenu').classList.toggle('active');
         }
