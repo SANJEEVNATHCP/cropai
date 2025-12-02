@@ -215,14 +215,6 @@
                     <div id="topicsContainer" class="space-y-2"></div>
                 </div>
 
-                <!-- Stats -->
-                <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-xl p-6 text-white">
-                    <h3 id="statsTitle" class="text-xl font-bold mb-4">📊 Session Stats</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="text-center"><p class="text-3xl font-bold" id="questionsAsked">0</p><p id="questionsLabel" class="text-sm text-green-100">Questions Asked</p></div>
-                        <div class="text-center"><p class="text-3xl font-bold" id="sessionTime">0:00</p><p id="timeLabel" class="text-sm text-green-100">Session Time</p></div>
-                    </div>
-                </div>
             </div>
         </div>
     </main>
@@ -234,7 +226,6 @@
     <script>
         const API_BASE_URL = window.location.origin;
         let isListening = false, recognition, synthesis = window.speechSynthesis;
-        let questionsCount = 0, sessionStart = Date.now();
         let currentLanguage = localStorage.getItem('preferredLanguage') || 'en';
         let currentSpeechCode = 'en-IN', translations = {}, availableLanguages = [];
 
@@ -251,10 +242,6 @@
             await changeLanguage(currentLanguage);
             initSpeechRecognition();
             addWelcomeMessage();
-            setInterval(() => {
-                const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
-                document.getElementById('sessionTime').textContent = `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, '0')}`;
-            }, 1000);
         });
 
         async function loadLanguages() {
@@ -299,9 +286,6 @@
             document.getElementById('quickQuestionsTitle').textContent = `💡 ${translations.quick_questions || 'Quick Questions'}`;
             document.getElementById('aboutTitle').textContent = `🤖 ${translations.about || 'About Krishi AI'}`;
             document.getElementById('topicsTitle').textContent = `📚 ${translations.topics || 'I Can Help With'}`;
-            document.getElementById('statsTitle').textContent = `📊 ${translations.session_stats || 'Session Stats'}`;
-            document.getElementById('questionsLabel').textContent = translations.questions_asked || 'Questions Asked';
-            document.getElementById('timeLabel').textContent = translations.session_time || 'Session Time';
         }
 
         function renderTopics(topics) {
@@ -380,8 +364,6 @@
             const message = input.value.trim();
             if (!message) return;
             input.value = '';
-            questionsCount++;
-            document.getElementById('questionsAsked').textContent = questionsCount;
             addMessage(message, 'user');
             const typingId = showTyping();
             document.getElementById('agentStatus').textContent = translations.thinking || 'Thinking...';
