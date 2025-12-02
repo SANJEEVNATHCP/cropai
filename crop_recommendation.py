@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 import json
 import requests
 from datetime import datetime
+import random
 
 recommendation_bp = Blueprint('recommendation', __name__)
 
@@ -28,6 +29,38 @@ STATE_CITIES = {
     'Chhattisgarh': {'city': 'Raipur', 'lat': 21.2514, 'lon': 81.6296},
     'Kerala': {'city': 'Kochi', 'lat': 9.9312, 'lon': 76.2673},
     'Telangana': {'city': 'Hyderabad', 'lat': 17.3850, 'lon': 78.4867},
+}
+
+# STATE-SPECIFIC CROP PREFERENCES (Major crops grown in each state)
+STATE_CROP_PREFERENCES = {
+    'Punjab': {'wheat': 1.4, 'rice': 1.3, 'cotton': 1.2, 'maize': 1.1, 'potato': 1.2, 'sugarcane': 1.1},
+    'Haryana': {'wheat': 1.4, 'rice': 1.3, 'cotton': 1.2, 'mustard': 1.3, 'bajra': 1.2, 'sugarcane': 1.1},
+    'Uttar Pradesh': {'wheat': 1.3, 'rice': 1.3, 'sugarcane': 1.4, 'potato': 1.3, 'mustard': 1.2, 'maize': 1.1},
+    'West Bengal': {'rice': 1.5, 'potato': 1.3, 'jute': 1.4, 'wheat': 1.0, 'maize': 1.1, 'mustard': 1.2},
+    'Andhra Pradesh': {'rice': 1.4, 'cotton': 1.3, 'groundnut': 1.3, 'sugarcane': 1.2, 'maize': 1.2, 'chilli': 1.3},
+    'Tamil Nadu': {'rice': 1.4, 'sugarcane': 1.3, 'groundnut': 1.3, 'cotton': 1.2, 'maize': 1.1, 'banana': 1.3},
+    'Karnataka': {'rice': 1.2, 'maize': 1.3, 'groundnut': 1.2, 'cotton': 1.3, 'sugarcane': 1.3, 'jowar': 1.2},
+    'Maharashtra': {'cotton': 1.4, 'sugarcane': 1.4, 'soybean': 1.4, 'groundnut': 1.2, 'jowar': 1.3, 'onion': 1.4},
+    'Madhya Pradesh': {'soybean': 1.5, 'wheat': 1.3, 'chickpea': 1.4, 'maize': 1.2, 'cotton': 1.2, 'mustard': 1.1},
+    'Gujarat': {'cotton': 1.5, 'groundnut': 1.4, 'wheat': 1.2, 'rice': 1.1, 'bajra': 1.3, 'castor': 1.3},
+    'Rajasthan': {'bajra': 1.5, 'wheat': 1.3, 'mustard': 1.4, 'groundnut': 1.2, 'maize': 1.2, 'jowar': 1.3},
+    'Bihar': {'rice': 1.4, 'wheat': 1.3, 'maize': 1.3, 'potato': 1.2, 'sugarcane': 1.2, 'onion': 1.1},
+    'Odisha': {'rice': 1.5, 'groundnut': 1.2, 'sugarcane': 1.1, 'maize': 1.2, 'cotton': 1.1, 'vegetables': 1.2},
+    'Assam': {'rice': 1.5, 'tea': 1.4, 'jute': 1.3, 'potato': 1.2, 'maize': 1.1, 'sugarcane': 1.1},
+    'Jharkhand': {'rice': 1.4, 'wheat': 1.2, 'maize': 1.3, 'potato': 1.2, 'vegetables': 1.2, 'pulses': 1.2},
+    'Chhattisgarh': {'rice': 1.5, 'maize': 1.2, 'soybean': 1.2, 'groundnut': 1.1, 'sugarcane': 1.1, 'wheat': 1.0},
+    'Kerala': {'rice': 1.3, 'coconut': 1.5, 'rubber': 1.4, 'banana': 1.3, 'pepper': 1.4, 'cardamom': 1.3},
+    'Telangana': {'rice': 1.4, 'cotton': 1.4, 'maize': 1.3, 'soybean': 1.2, 'groundnut': 1.2, 'sugarcane': 1.2},
+}
+
+# Soil type mapping (user input -> database compatible)
+SOIL_TYPE_MAPPING = {
+    'Loamy': ['Loamy', 'Sandy Loam', 'Alluvial'],
+    'Clay': ['Clay', 'Loamy', 'Black'],
+    'Sandy': ['Sandy', 'Sandy Loam', 'Red'],
+    'Black': ['Black', 'Clay', 'Loamy'],
+    'Red': ['Red', 'Sandy', 'Loamy'],
+    'Alluvial': ['Alluvial', 'Loamy', 'Clay'],
 }
 
 def get_live_weather(state):
@@ -209,60 +242,76 @@ WATER_LEVELS = ['Low', 'Medium', 'High']
 
 
 def calculate_crop_score(crop_name, crop_data, inputs):
-    """Calculate suitability score for a crop (0-100)"""
-    score = 50  # Base score
+    """Calculate suitability score for a crop (0-100) with state-specific preferences"""
+    score = 40  # Base score (reduced to allow more variation)
     reasons = []
+    state = inputs.get('state', '')
     
-    # Season match (25 points)
+    # STATE-SPECIFIC BONUS (Up to 20 points) - THIS MAKES DIFFERENT STATES GET DIFFERENT RECOMMENDATIONS
+    state_prefs = STATE_CROP_PREFERENCES.get(state, {})
+    state_multiplier = state_prefs.get(crop_name, 0.8)  # Default 0.8 for non-preferred crops
+    state_bonus = int((state_multiplier - 0.8) * 50)  # Convert to points
+    if state_bonus > 0:
+        score += state_bonus
+        reasons.append(f"🏆 {crop_name.title()} is a major crop in {state}")
+    elif state_multiplier < 1.0:
+        score -= 5
+        reasons.append(f"📊 {crop_name.title()} is less common in {state}")
+    
+    # Season match (20 points)
     if inputs['season'] in crop_data['season']:
-        score += 25
-        reasons.append(f"✅ {crop_name.title()} is ideal for {inputs['season']} season")
-    else:
-        score -= 15
-        reasons.append(f"⚠️ {crop_name.title()} is typically grown in {', '.join(crop_data['season'])}")
-    
-    # Soil match (20 points)
-    if inputs['soil_type'] in crop_data['soil_types']:
         score += 20
-        reasons.append(f"✅ {inputs['soil_type']} soil is suitable")
+        reasons.append(f"✅ Ideal for {inputs['season']} season")
+    else:
+        score -= 20
+        reasons.append(f"⚠️ Best grown in {', '.join(crop_data['season'])}")
+    
+    # Soil match with mapping (15 points)
+    user_soil = inputs.get('soil_type', 'Loamy')
+    compatible_soils = SOIL_TYPE_MAPPING.get(user_soil, [user_soil])
+    soil_match = any(s in crop_data['soil_types'] for s in compatible_soils)
+    
+    if soil_match:
+        score += 15
+        reasons.append(f"✅ {user_soil} soil is suitable")
     else:
         score -= 10
-        reasons.append(f"⚠️ Preferred soil types: {', '.join(crop_data['soil_types'])}")
+        reasons.append(f"⚠️ Preferred: {', '.join(crop_data['soil_types'][:2])}")
     
-    # Water availability match (20 points)
+    # Water availability match (15 points)
     water_map = {'Low': 1, 'Medium': 2, 'High': 3}
     crop_water = water_map.get(crop_data['water_need'], 2)
     user_water = water_map.get(inputs['water_availability'], 2)
     
     if user_water >= crop_water:
-        score += 20
-        reasons.append(f"✅ Water availability is sufficient")
+        score += 15
+        reasons.append(f"✅ Water availability sufficient")
     elif user_water == crop_water - 1:
-        score += 10
-        reasons.append(f"⚠️ May need supplemental irrigation")
+        score += 5
+        reasons.append(f"⚠️ May need extra irrigation")
     else:
         score -= 15
-        reasons.append(f"❌ Insufficient water for this crop")
+        reasons.append(f"❌ Needs more water ({crop_data['water_need']})")
     
-    # pH match (15 points)
+    # pH match (10 points)
     ph = inputs.get('ph', 6.5)
     ph_min, ph_max = crop_data['ph_range']
     if ph_min <= ph <= ph_max:
-        score += 15
-        reasons.append(f"✅ Soil pH is optimal ({ph})")
+        score += 10
+        reasons.append(f"✅ Soil pH optimal ({ph})")
     elif ph_min - 0.5 <= ph <= ph_max + 0.5:
-        score += 5
-        reasons.append(f"⚠️ Soil pH needs adjustment (optimal: {ph_min}-{ph_max})")
+        score += 3
+        reasons.append(f"⚠️ pH needs adjustment ({ph_min}-{ph_max})")
     else:
-        score -= 10
-        reasons.append(f"❌ Soil pH is not suitable")
+        score -= 8
+        reasons.append(f"❌ pH not suitable")
     
     # Budget match (10 points)
     if inputs.get('budget'):
         budget_per_ha = inputs['budget'] / max(inputs.get('farm_size', 1), 0.1)
         if budget_per_ha >= crop_data['investment_per_ha']:
             score += 10
-            reasons.append(f"✅ Budget is sufficient")
+            reasons.append(f"✅ Budget sufficient")
         elif budget_per_ha >= crop_data['investment_per_ha'] * 0.7:
             score += 5
             reasons.append(f"⚠️ Budget is tight, may need optimization")
