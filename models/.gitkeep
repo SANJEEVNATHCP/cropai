@@ -1,0 +1,4 @@
+# This directory stores trained ML models
+# Files:
+# - crop_recommender.joblib (Random Forest model)
+# - label_encoders.joblib (Label encoders for categorical features)

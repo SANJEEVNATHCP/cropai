@@ -18,3 +18,8 @@ gunicorn==23.0.0
 
 # Database (optional - for PostgreSQL on Railway)
 psycopg2-binary==2.9.9
+
+# ML Libraries for Crop Recommendation
+scikit-learn==1.3.2
+numpy==1.24.3
+joblib==1.3.2

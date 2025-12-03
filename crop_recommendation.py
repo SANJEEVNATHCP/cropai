@@ -3,8 +3,24 @@ import json
 import requests
 from datetime import datetime
 import random
+import numpy as np
+import os
+
+# ML Libraries
+try:
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.preprocessing import LabelEncoder
+    import joblib
+    ML_AVAILABLE = True
+except ImportError:
+    ML_AVAILABLE = False
+    print("⚠️ ML libraries not available. Using rule-based system.")
 
 recommendation_bp = Blueprint('recommendation', __name__)
+
+# ML Model Storage
+ML_MODEL = None
+LABEL_ENCODERS = {}
 
 # API Keys
 OPENWEATHER_API_KEY = 'b576d8a952bf4c45c7ef5bddb148e76b'
@@ -17,36 +33,76 @@ DATA_GOV_BASE_URL = 'https://api.data.gov.in/resource'
 def get_govt_crop_data(state=None, crop=None):
     """Fetch crop data from data.gov.in API"""
     try:
-        # Agriculture statistics resource ID (crop production data)
-        resource_id = '9ef84268-d588-465a-a308-a864a43d0070'
+        # Multiple resource IDs for different crop datasets
+        resource_ids = [
+            '9ef84268-d588-465a-a308-a864a43d0070',  # Crop production
+            '35be999b-68d1-4fc5-8094-6e0b88c7ce4c',  # Agriculture stats
+        ]
         
-        url = f"{DATA_GOV_BASE_URL}/{resource_id}"
-        params = {
-            'api-key': DATA_GOV_API_KEY,
-            'format': 'json',
-            'limit': 100
-        }
+        all_records = []
         
-        if state:
-            params['filters[state_name]'] = state
-        if crop:
-            params['filters[crop]'] = crop
+        for resource_id in resource_ids:
+            url = f"{DATA_GOV_BASE_URL}/{resource_id}"
+            params = {
+                'api-key': DATA_GOV_API_KEY,
+                'format': 'json',
+                'limit': 500
+            }
             
-        response = requests.get(url, params=params, timeout=10)
+            if state:
+                params['filters[state_name]'] = state
+            if crop:
+                params['filters[crop]'] = crop
+                
+            response = requests.get(url, params=params, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'records' in data and len(data['records']) > 0:
+                    all_records.extend(data['records'])
         
-        if response.status_code == 200:
-            data = response.json()
-            if 'records' in data:
-                return {
-                    'success': True,
-                    'records': data['records'],
-                    'total': data.get('total', len(data['records'])),
-                    'source': 'data.gov.in'
-                }
+        if all_records:
+            return {
+                'success': True,
+                'records': all_records,
+                'total': len(all_records),
+                'source': 'data.gov.in'
+            }
         return {'success': False, 'error': 'No data found'}
     except Exception as e:
         print(f"data.gov.in API error: {e}")
         return {'success': False, 'error': str(e)}
+
+
+def collect_govt_training_data():
+    """Collect real crop data from data.gov.in for ML training"""
+    training_data = []
+    states = list(STATE_CITIES.keys())
+    
+    print("🔄 Collecting training data from data.gov.in...")
+    
+    for state in states:
+        govt_data = get_govt_crop_data(state=state)
+        
+        if govt_data['success']:
+            for record in govt_data['records']:
+                crop_name = str(record.get('crop', record.get('crop_name', ''))).lower().strip()
+                production = float(record.get('production', record.get('Production', 0)) or 0)
+                area = float(record.get('area', record.get('Area', 0)) or 0)
+                season = record.get('season', record.get('Season', 'Kharif'))
+                
+                if crop_name and crop_name in CROPS_DATABASE:
+                    training_data.append({
+                        'state': state,
+                        'crop': crop_name,
+                        'season': season if season in SEASONS else 'Kharif',
+                        'production': production,
+                        'area': area,
+                        'success': 1 if production > 0 else 0
+                    })
+    
+    print(f"✅ Collected {len(training_data)} records from government data")
+    return training_data
 
 
 def get_govt_crop_statistics(state):
@@ -589,6 +645,436 @@ def get_states():
     return jsonify({
         'success': True,
         'states': states
+    }), 200
+
+
+# ==================== ML-BASED RECOMMENDATION SYSTEM ====================
+
+def fetch_all_govt_data():
+    """Fetch comprehensive crop data from multiple data.gov.in resources"""
+    all_records = []
+    
+    # Multiple resource IDs for crop production data from data.gov.in
+    resource_ids = [
+        '9ef84268-d588-465a-a308-a864a43d0070',  # Crop production statistics
+        '35be999b-68d1-4fc5-8094-6e0b88c7ce4c',  # Agriculture statistics
+        '6176ee09-3d56-4a3b-8115-21841576b2f6',  # State-wise crop data
+        '5c2f62fe-5afa-4119-a499-fec9d604d5bd',  # District-wise data
+    ]
+    
+    print("🔄 Fetching real data from data.gov.in...")
+    
+    for resource_id in resource_ids:
+        try:
+            # Fetch multiple pages of data
+            for offset in range(0, 5000, 500):
+                url = f"{DATA_GOV_BASE_URL}/{resource_id}"
+                params = {
+                    'api-key': DATA_GOV_API_KEY,
+                    'format': 'json',
+                    'limit': 500,
+                    'offset': offset
+                }
+                
+                response = requests.get(url, params=params, timeout=30)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if 'records' in data and len(data['records']) > 0:
+                        all_records.extend(data['records'])
+                        print(f"  📊 Resource {resource_id[:8]}...: +{len(data['records'])} records (offset {offset})")
+                    else:
+                        break  # No more records
+                else:
+                    break
+        except Exception as e:
+            print(f"  ⚠️ Error with resource {resource_id[:8]}: {e}")
+            continue
+    
+    print(f"✅ Total records fetched: {len(all_records)}")
+    return all_records
+
+
+def process_govt_data_for_training(records):
+    """Process government data into training format"""
+    training_data = []
+    crop_mapping = {
+        'paddy': 'rice', 'rice': 'rice', 'wheat': 'wheat', 
+        'maize': 'maize', 'corn': 'maize', 'cotton': 'cotton',
+        'sugarcane': 'sugarcane', 'soybean': 'soybean', 'soyabean': 'soybean',
+        'groundnut': 'groundnut', 'potato': 'potato', 'tomato': 'tomato',
+        'onion': 'onion', 'mustard': 'mustard', 'rapeseed': 'mustard',
+        'gram': 'chickpea', 'chickpea': 'chickpea', 'chana': 'chickpea',
+        'bajra': 'bajra', 'pearl millet': 'bajra', 'jowar': 'jowar',
+        'sorghum': 'jowar', 'arhar': 'chickpea', 'tur': 'chickpea'
+    }
+    
+    season_mapping = {
+        'kharif': 'Kharif', 'rabi': 'Rabi', 'zaid': 'Zaid',
+        'summer': 'Zaid', 'winter': 'Rabi', 'monsoon': 'Kharif',
+        'whole year': 'Kharif', 'autumn': 'Kharif'
+    }
+    
+    state_mapping = {
+        'punjab': 'Punjab', 'haryana': 'Haryana', 'uttar pradesh': 'Uttar Pradesh',
+        'west bengal': 'West Bengal', 'andhra pradesh': 'Andhra Pradesh',
+        'tamil nadu': 'Tamil Nadu', 'karnataka': 'Karnataka',
+        'maharashtra': 'Maharashtra', 'madhya pradesh': 'Madhya Pradesh',
+        'gujarat': 'Gujarat', 'rajasthan': 'Rajasthan', 'bihar': 'Bihar',
+        'odisha': 'Odisha', 'orissa': 'Odisha', 'assam': 'Assam',
+        'jharkhand': 'Jharkhand', 'chhattisgarh': 'Chhattisgarh',
+        'kerala': 'Kerala', 'telangana': 'Telangana'
+    }
+    
+    for record in records:
+        try:
+            # Extract and normalize fields
+            crop_raw = str(record.get('crop', record.get('Crop', record.get('crop_name', '')))).lower().strip()
+            state_raw = str(record.get('state_name', record.get('State', record.get('state', '')))).lower().strip()
+            season_raw = str(record.get('season', record.get('Season', 'kharif'))).lower().strip()
+            production = float(record.get('production', record.get('Production', 0)) or 0)
+            area = float(record.get('area', record.get('Area', 0)) or 0)
+            
+            # Map to our database values
+            crop = crop_mapping.get(crop_raw, None)
+            state = state_mapping.get(state_raw, None)
+            season = season_mapping.get(season_raw, 'Kharif')
+            
+            # Only include valid records
+            if crop and state and crop in CROPS_DATABASE and state in STATE_CITIES:
+                yield_per_ha = production / area if area > 0 else 0
+                
+                # Determine soil and water based on crop requirements (from database)
+                crop_data = CROPS_DATABASE[crop]
+                soil_type = random.choice(crop_data['soil_types']) if crop_data['soil_types'] else 'Loamy'
+                water = crop_data['water_need']
+                ph = random.uniform(crop_data['ph_range'][0], crop_data['ph_range'][1])
+                
+                # Estimate temperature/humidity based on season
+                if season == 'Kharif':
+                    temp = random.uniform(25, 35)
+                    humidity = random.uniform(60, 90)
+                elif season == 'Rabi':
+                    temp = random.uniform(15, 25)
+                    humidity = random.uniform(40, 70)
+                else:  # Zaid
+                    temp = random.uniform(30, 40)
+                    humidity = random.uniform(30, 60)
+                
+                training_data.append({
+                    'state': state,
+                    'season': season,
+                    'soil_type': soil_type,
+                    'water_availability': water,
+                    'ph': round(ph, 1),
+                    'temperature': round(temp, 1),
+                    'humidity': round(humidity, 1),
+                    'budget_per_ha': crop_data['investment_per_ha'],
+                    'crop': crop,
+                    'production': production,
+                    'area': area,
+                    'yield_per_ha': yield_per_ha,
+                    'source': 'data.gov.in'
+                })
+        except Exception as e:
+            continue
+    
+    print(f"✅ Processed {len(training_data)} valid training samples from government data")
+    return training_data
+
+
+def train_ml_model(training_data=None):
+    """Train Random Forest model using REAL data from data.gov.in"""
+    global ML_MODEL, LABEL_ENCODERS
+    
+    if not ML_AVAILABLE:
+        return {'success': False, 'error': 'ML libraries not installed'}
+    
+    # ALWAYS fetch real data from data.gov.in
+    print("📡 Fetching REAL training data from data.gov.in...")
+    govt_records = fetch_all_govt_data()
+    
+    if govt_records:
+        training_data = process_govt_data_for_training(govt_records)
+        print(f"📊 Using {len(training_data)} real samples from government data")
+    
+    if not training_data or len(training_data) < 50:
+        return {
+            'success': False, 
+            'error': f'Insufficient real data from data.gov.in. Got {len(training_data) if training_data else 0} records. API may be unavailable.'
+        }
+    
+    print(f"🤖 Training ML model with {len(training_data)} REAL samples...")
+    
+    # Initialize encoders
+    LABEL_ENCODERS = {
+        'state': LabelEncoder(),
+        'season': LabelEncoder(),
+        'soil_type': LabelEncoder(),
+        'water': LabelEncoder(),
+        'crop': LabelEncoder()
+    }
+    
+    # Fit encoders on all possible values
+    LABEL_ENCODERS['state'].fit(list(STATE_CITIES.keys()))
+    LABEL_ENCODERS['season'].fit(SEASONS)
+    LABEL_ENCODERS['soil_type'].fit(SOIL_TYPES)
+    LABEL_ENCODERS['water'].fit(WATER_LEVELS)
+    LABEL_ENCODERS['crop'].fit(list(CROPS_DATABASE.keys()))
+    
+    # Prepare features
+    X = []
+    y = []
+    
+    for sample in training_data:
+        try:
+            features = [
+                LABEL_ENCODERS['state'].transform([sample['state']])[0],
+                LABEL_ENCODERS['season'].transform([sample['season']])[0],
+                LABEL_ENCODERS['soil_type'].transform([sample['soil_type']])[0],
+                LABEL_ENCODERS['water'].transform([sample['water_availability']])[0],
+                sample['ph'],
+                sample.get('temperature', 25),
+                sample.get('humidity', 70),
+                sample.get('budget_per_ha', 50000)
+            ]
+            X.append(features)
+            y.append(LABEL_ENCODERS['crop'].transform([sample['crop']])[0])
+        except Exception as e:
+            continue
+    
+    if len(X) < 50:
+        return {'success': False, 'error': f'Could not process training data. Only {len(X)} valid samples.'}
+    
+    X = np.array(X)
+    y = np.array(y)
+    
+    # Train Random Forest
+    ML_MODEL = RandomForestClassifier(
+        n_estimators=100,
+        max_depth=15,
+        min_samples_split=5,
+        min_samples_leaf=2,
+        random_state=42,
+        n_jobs=-1
+    )
+    
+    ML_MODEL.fit(X, y)
+    
+    # Save model
+    try:
+        os.makedirs('models', exist_ok=True)
+        joblib.dump(ML_MODEL, 'models/crop_recommender.joblib')
+        joblib.dump(LABEL_ENCODERS, 'models/label_encoders.joblib')
+        print("✅ Model saved to models/crop_recommender.joblib")
+    except Exception as e:
+        print(f"⚠️ Could not save model: {e}")
+    
+    print(f"✅ ML Model trained on {len(X)} samples")
+    return {
+        'success': True,
+        'samples_used': len(X),
+        'n_crops': len(CROPS_DATABASE),
+        'model_type': 'RandomForestClassifier'
+    }
+
+
+def load_ml_model():
+    """Load trained ML model from disk"""
+    global ML_MODEL, LABEL_ENCODERS
+    
+    if not ML_AVAILABLE:
+        return False
+    
+    try:
+        if os.path.exists('models/crop_recommender.joblib'):
+            ML_MODEL = joblib.load('models/crop_recommender.joblib')
+            LABEL_ENCODERS = joblib.load('models/label_encoders.joblib')
+            print("✅ ML Model loaded from disk")
+            return True
+    except Exception as e:
+        print(f"⚠️ Could not load model: {e}")
+    
+    return False
+
+
+def predict_with_ml(inputs):
+    """Get crop recommendations using ML model"""
+    global ML_MODEL, LABEL_ENCODERS
+    
+    if ML_MODEL is None or not LABEL_ENCODERS:
+        return None
+    
+    try:
+        # Prepare features
+        features = np.array([[
+            LABEL_ENCODERS['state'].transform([inputs['state']])[0],
+            LABEL_ENCODERS['season'].transform([inputs['season']])[0],
+            LABEL_ENCODERS['soil_type'].transform([inputs.get('soil_type', 'Loamy')])[0],
+            LABEL_ENCODERS['water'].transform([inputs.get('water_availability', 'Medium')])[0],
+            inputs.get('ph', 6.5),
+            inputs.get('live_weather', {}).get('temperature', 25) if inputs.get('live_weather') else 25,
+            inputs.get('live_weather', {}).get('humidity', 70) if inputs.get('live_weather') else 70,
+            inputs.get('budget', 100000) / max(inputs.get('farm_size', 1), 0.1)
+        ]])
+        
+        # Get probabilities for all crops
+        probabilities = ML_MODEL.predict_proba(features)[0]
+        crop_names = LABEL_ENCODERS['crop'].classes_
+        
+        # Get top 5 crops with confidence scores
+        top_indices = np.argsort(probabilities)[-5:][::-1]
+        
+        recommendations = []
+        for idx in top_indices:
+            crop_name = crop_names[idx]
+            confidence = probabilities[idx] * 100
+            
+            if crop_name in CROPS_DATABASE:
+                crop_data = CROPS_DATABASE[crop_name]
+                profit = crop_data['expected_revenue'] - crop_data['investment_per_ha']
+                roi = (profit / crop_data['investment_per_ha']) * 100
+                
+                recommendations.append({
+                    'crop': crop_name.title(),
+                    'score': int(confidence),
+                    'confidence': round(confidence, 1),
+                    'suitability': 'Excellent' if confidence >= 60 else 'Good' if confidence >= 40 else 'Fair',
+                    'prediction_method': 'ML (Random Forest)',
+                    'reasons': [
+                        f"🤖 ML Confidence: {confidence:.1f}%",
+                        f"✅ Predicted for {inputs['state']} in {inputs['season']}",
+                        f"📊 Trained on REAL data from data.gov.in"
+                    ],
+                    'financials': {
+                        'investment_per_ha': crop_data['investment_per_ha'],
+                        'expected_revenue_per_ha': crop_data['expected_revenue'],
+                        'expected_profit_per_ha': profit,
+                        'roi_percent': round(roi, 1),
+                        'total_investment': crop_data['investment_per_ha'] * inputs.get('farm_size', 1),
+                        'total_expected_profit': profit * inputs.get('farm_size', 1)
+                    },
+                    'details': {
+                        'duration_days': crop_data['duration_days'],
+                        'water_need': crop_data['water_need'],
+                        'risk_level': crop_data['risk_level'],
+                        'best_seasons': crop_data['season']
+                    }
+                })
+        
+        return recommendations
+    
+    except Exception as e:
+        print(f"ML prediction error: {e}")
+        return None
+
+
+# ML API Endpoints
+
+@recommendation_bp.route('/ml/train', methods=['POST'])
+def train_model_endpoint():
+    """Train the ML model using REAL data from data.gov.in"""
+    if not ML_AVAILABLE:
+        return jsonify({'success': False, 'error': 'ML libraries not installed. Run: pip install scikit-learn numpy joblib'}), 400
+    
+    # Train model with real government data
+    result = train_ml_model()
+    
+    if result['success']:
+        result['data_source'] = 'data.gov.in (Government of India)'
+        result['message'] = 'Model trained on REAL crop production data'
+    
+    return jsonify(result), 200 if result['success'] else 500
+
+
+@recommendation_bp.route('/ml/predict', methods=['POST'])
+def ml_predict_endpoint():
+    """Get ML-based crop recommendations"""
+    global ML_MODEL
+    
+    if not ML_AVAILABLE:
+        return jsonify({'success': False, 'error': 'ML libraries not installed'}), 400
+    
+    # Load model if not loaded
+    if ML_MODEL is None:
+        if not load_ml_model():
+            # Train on-the-fly
+            train_ml_model()
+    
+    if ML_MODEL is None:
+        return jsonify({'success': False, 'error': 'Model not available'}), 500
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'Request data required'}), 400
+    
+    state = data.get('state')
+    season = data.get('season')
+    
+    if not state or not season:
+        return jsonify({'success': False, 'error': 'State and season required'}), 400
+    
+    live_weather = get_live_weather(state) if data.get('use_live_weather', True) else None
+    
+    inputs = {
+        'state': state,
+        'season': season,
+        'soil_type': data.get('soil_type', 'Loamy'),
+        'water_availability': data.get('water_availability', 'Medium'),
+        'ph': float(data.get('ph', 6.5)),
+        'budget': float(data.get('budget', 100000)),
+        'farm_size': float(data.get('farm_size', 1)),
+        'live_weather': live_weather
+    }
+    
+    recommendations = predict_with_ml(inputs)
+    
+    if not recommendations:
+        return jsonify({'success': False, 'error': 'Prediction failed'}), 500
+    
+    return jsonify({
+        'success': True,
+        'recommendations': recommendations,
+        'inputs': inputs,
+        'prediction_method': 'Machine Learning (Random Forest)',
+        'model_info': {
+            'type': 'RandomForestClassifier',
+            'data_source': 'data.gov.in (Government of India)',
+            'training_data': 'Real crop production statistics'
+        },
+        'generated_at': datetime.now().isoformat()
+    }), 200
+
+
+@recommendation_bp.route('/ml/status', methods=['GET'])
+def ml_status():
+    """Check ML model status"""
+    global ML_MODEL
+    
+    model_loaded = ML_MODEL is not None
+    model_file_exists = os.path.exists('models/crop_recommender.joblib') if ML_AVAILABLE else False
+    
+    return jsonify({
+        'ml_available': ML_AVAILABLE,
+        'model_loaded': model_loaded,
+        'model_file_exists': model_file_exists,
+        'model_path': 'models/crop_recommender.joblib',
+        'supported_crops': list(CROPS_DATABASE.keys()),
+        'supported_states': list(STATE_CITIES.keys())
+    }), 200
+
+
+@recommendation_bp.route('/collect-training-data', methods=['GET'])
+def collect_training_data_endpoint():
+    """Collect training data from government API"""
+    govt_data = collect_govt_training_data()
+    
+    return jsonify({
+        'success': True,
+        'total_records': len(govt_data),
+        'sample': govt_data[:10] if govt_data else [],
+        'source': 'data.gov.in',
+        'message': f'Collected {len(govt_data)} records from government data'
     }), 200
 
 
