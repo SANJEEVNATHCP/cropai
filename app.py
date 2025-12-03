@@ -98,7 +98,7 @@ def favicon():
 @app.route('/logo.svg')
 def logo():
     from flask import Response
-    svg_content = '''<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    svg_content = '''<svg width="280" height="60" viewBox="0 0 280 60" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#10b981"/>
@@ -117,32 +117,27 @@ def logo():
       <stop offset="100%" style="stop-color:#1d4ed8"/>
     </linearGradient>
   </defs>
-  <polygon points="100,10 170,50 170,130 100,170 30,130 30,50" fill="url(#grad1)" stroke="#047857" stroke-width="3"/>
-  <polygon points="100,25 155,55 155,125 100,155 45,125 45,55" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.2"/>
-  <polygon points="100,70 70,90 80,110 100,120" fill="url(#grad2)"/>
-  <polygon points="70,90 60,100 70,115 80,110" fill="#047857" opacity="0.7"/>
-  <polygon points="100,70 130,90 120,110 100,120" fill="url(#grad3)"/>
-  <polygon points="130,90 140,100 130,115 120,110" fill="#059669" opacity="0.7"/>
-  <polygon points="95,120 105,120 103,145 97,145" fill="#047857"/>
-  <polygon points="100,50 90,70 100,75 110,70" fill="#34d399"/>
-  <g transform="translate(100, 155)">
-    <polygon points="0,-8 8,0 0,8 -8,0" fill="url(#techGrad)" stroke="#1e40af" stroke-width="1.5"/>
-    <polygon points="0,-5 5,0 0,5 -5,0" fill="#60a5fa" opacity="0.4"/>
-    <circle cx="-10" cy="0" r="1.5" fill="#3b82f6"/>
-    <circle cx="10" cy="0" r="1.5" fill="#3b82f6"/>
-    <line x1="-8" y1="0" x2="-10" y2="0" stroke="#60a5fa" stroke-width="1"/>
-    <line x1="8" y1="0" x2="10" y2="0" stroke="#60a5fa" stroke-width="1"/>
+  
+  <!-- Hexagon icon (scaled for horizontal layout) -->
+  <g transform="translate(30, 30) scale(0.25)">
+    <polygon points="0,-80 70,-40 70,40 0,80 -70,40 -70,-40" fill="url(#grad1)" stroke="#047857" stroke-width="6"/>
+    <polygon points="0,-65 55,-35 55,35 0,65 -55,35 -55,-35" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.2"/>
+    <polygon points="0,-20 -30,0 -20,30 0,40" fill="url(#grad2)"/>
+    <polygon points="-30,0 -40,10 -30,35 -20,30" fill="#047857" opacity="0.7"/>
+    <polygon points="0,-20 30,0 20,30 0,40" fill="url(#grad3)"/>
+    <polygon points="30,0 40,10 30,35 20,30" fill="#059669" opacity="0.7"/>
+    <polygon points="-5,40 5,40 3,65 -3,65" fill="#047857"/>
+    <polygon points="0,-40 -10,-20 0,-15 10,-20" fill="#34d399"/>
+    <g transform="translate(0, 70)">
+      <polygon points="0,-8 8,0 0,8 -8,0" fill="url(#techGrad)" stroke="#1e40af" stroke-width="2"/>
+      <polygon points="0,-5 5,0 0,5 -5,0" fill="#60a5fa" opacity="0.4"/>
+    </g>
   </g>
-  <polygon points="30,50 35,48 33,53" fill="#34d399" opacity="0.5"/>
-  <polygon points="170,50 165,48 167,53" fill="#34d399" opacity="0.5"/>
-  <polygon points="30,130 35,132 33,127" fill="#34d399" opacity="0.5"/>
-  <polygon points="170,130 165,132 167,127" fill="#34d399" opacity="0.5"/>
-  <g opacity="0.15" stroke="#ffffff" stroke-width="1">
-    <line x1="50" y1="60" x2="70" y2="60"/>
-    <line x1="130" y1="60" x2="150" y2="60"/>
-    <line x1="50" y1="120" x2="70" y2="120"/>
-    <line x1="130" y1="120" x2="150" y2="120"/>
-  </g>
+  
+  <!-- Text: CROPYIELD AI -->
+  <text x="70" y="40" fill="#ffffff" font-size="28" font-weight="bold" font-family="'Segoe UI', Arial, sans-serif" letter-spacing="1">
+    CROPYIELD <tspan fill="#93c5fd" font-size="32" font-weight="900">AI</tspan>
+  </text>
 </svg>'''
     return Response(svg_content, mimetype='image/svg+xml')
 
