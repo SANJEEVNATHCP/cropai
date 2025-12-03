@@ -37,31 +37,14 @@
     <!-- Header -->
     <header class="gradient-bg text-white shadow-lg sticky top-0 z-50">
         <div class="container mx-auto px-4 py-4 flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-                <svg width="200" height="60" viewBox="0 0 200 60" style="height: 50px; width: auto;" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <linearGradient id="hGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#10b981"/>
-                            <stop offset="100%" style="stop-color:#059669"/>
-                        </linearGradient>
-                        <linearGradient id="hGrad2" x1="0%" y1="100%" x2="100%" y2="0%">
-                            <stop offset="0%" style="stop-color:#34d399"/>
-                            <stop offset="100%" style="stop-color:#10b981"/>
-                        </linearGradient>
-                    </defs>
-                    <g transform="translate(30, 30)">
-                        <polygon points="0,-20 18,-10 18,10 0,20 -18,10 -18,-10" fill="url(#hGrad1)" stroke="#047857" stroke-width="1.5"/>
-                        <polygon points="0,-6 -8,-2 -6,4 0,7" fill="url(#hGrad2)"/>
-                        <polygon points="0,-6 8,-2 6,4 0,7" fill="#34d399"/>
-                        <polygon points="0,-12 -3,-6 0,-5 3,-6" fill="#6ee7b7"/>
-                        <polygon points="-1,7 1,7 0.5,15 -0.5,15" fill="#047857"/>
-                        <polygon points="0,17 3,15.5 0,14 -3,15.5" fill="#3b82f6" stroke="#1d4ed8" stroke-width="0.5"/>
-                    </g>
-                    <text x="60" y="38" fill="#ffffff" font-size="22" font-weight="bold" font-family="'Segoe UI', Arial, sans-serif" letter-spacing="0.5">
-                        CROPYIELD <tspan fill="#3b82f6" font-size="26">AI</tspan>
-                    </text>
-                </svg>
-            </div>
+            <a href="/" class="flex items-center space-x-3">
+                <img src="/static/logo.svg" alt="CropYield AI Logo" class="h-12 w-12">
+                <h1 class="text-2xl md:text-3xl font-bold tracking-wide">
+                    <span class="text-white">CROPYIELD</span>
+                    <span class="text-blue-400 ml-1 text-3xl md:text-4xl">AI</span>
+                </h1>
+            </a>
+            <div class="hidden"></div>
             <nav class="hidden md:flex space-x-6">
                 <a href="/yield" class="hover:text-yellow-300 transition" data-i18n="nav_yield">Yield Prediction</a>
                 <a href="/recommendation" class="hover:text-yellow-300 transition" data-i18n="nav_recommend">Crop Recommendation</a>
@@ -323,7 +306,7 @@
                 card_ai_title: 'AI Chat',
                 card_ai_desc: 'Chat with AI for instant farming advice',
                 btn_chat: '💬 Chat',
-                footer_text: '🌾 CropYield AI - Empowering Farmers with AI | © 2025',
+                footer_text: ' CropYield AI - Empowering Farmers with AI | © 2025',
                 footer_about: 'About',
                 footer_contact: 'Contact',
                 footer_privacy: 'Privacy'
