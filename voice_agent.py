@@ -30,7 +30,7 @@ SUPPORTED_LANGUAGES = {
 # Language-specific greetings and UI text
 UI_TRANSLATIONS = {
     'en': {
-        'welcome': "Hello! I'm Krishi AI, your agricultural assistant.",
+        'welcome': "Hello! I'm GreenMind AI, your agricultural assistant.",
         'ready': 'Ready to help you',
         'listening': 'Listening... Speak now',
         'thinking': 'Thinking...',
@@ -38,7 +38,7 @@ UI_TRANSLATIONS = {
         'mic_prompt': 'Click the mic to start speaking',
         'type_prompt': 'Type your question or click mic to speak...',
         'quick_questions': 'Quick Questions',
-        'about': 'About Krishi AI',
+        'about': 'About GreenMind AI',
         'topics': 'I Can Help With',
         'session_stats': 'Session Stats',
         'questions_asked': 'Questions Asked',
@@ -54,7 +54,7 @@ UI_TRANSLATIONS = {
         'crops_soil_weather': 'Crops, soil, weather & schemes'
     },
     'hi': {
-        'welcome': "नमस्ते! मैं कृषि AI हूं, आपका कृषि सहायक।",
+        'welcome': "नमस्ते! मैं GreenMind AI हूं, आपका कृषि सहायक।",
         'ready': 'आपकी मदद के लिए तैयार',
         'listening': 'सुन रहा हूं... अब बोलें',
         'thinking': 'सोच रहा हूं...',
