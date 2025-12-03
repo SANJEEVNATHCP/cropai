@@ -56,7 +56,9 @@ pip install -r requirements.txt
 4. **Set up environment**
 ```bash
 cp .env.example .env
-# Edit .env with your settings
+# Edit .env with your API keys:
+# 1. Get Gemini API key from: https://makersuite.google.com/app/apikey
+# 2. Update GEMINI_API_KEY in .env file
 ```
 
 5. **Run the application**

@@ -5,11 +5,12 @@ Multi-Language Support: Hindi, English, Marathi, Telugu, Tamil, Kannada, Bengali
 from flask import Blueprint, request, jsonify
 import requests as http_requests
 import random
+import os
 
 voice_agent_bp = Blueprint('voice_agent', __name__)
 
-# Google Gemini API Key
-GEMINI_API_KEY = 'AIzaSyDLwxWh3Ap9D5MrUI7Pz889HaIk8LEG1JY'
+# Google Gemini API Key - Load from environment variable
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 GEMINI_MODEL = 'gemini-2.0-flash'
 
 # Supported Languages with their codes and names

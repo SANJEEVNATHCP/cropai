@@ -579,7 +579,7 @@ def get_cities():
 
 
 # ============= VOICE AGENT API =============
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyDLwxWh3Ap9D5MrUI7Pz889HaIk8LEG1JY')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 GEMINI_MODEL = 'gemini-2.0-flash'
 
 SUPPORTED_LANGUAGES = {
