@@ -20,7 +20,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Initialize Flask app
 app = Flask(__name__, 
             template_folder=BASE_DIR,
-            static_folder=BASE_DIR)
+            static_folder=os.path.join(BASE_DIR, 'static'),
+            static_url_path='/static')
 
 # Configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'crop-yield-secret-key-2025')
@@ -62,11 +63,6 @@ app.register_blueprint(weather_bp, url_prefix='/api/weather')
 app.register_blueprint(livekit_bp, url_prefix='/api/livekit')
 
 print("✅ All routes registered")
-
-# Static files
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory(BASE_DIR, filename)
 
 # Root route
 @app.route('/')
