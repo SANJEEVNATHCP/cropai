@@ -185,7 +185,7 @@
                             </div>
                             
                             <button id="stopSpeakBtn" onclick="stopSpeaking()" 
-                                class="w-12 h-12 md:w-16 md:h-16 bg-red-600 hover:bg-red-700 text-white rounded-full items-center justify-center text-xl md:text-2xl shadow-lg transition flex-shrink-0 hidden">
+                                class="hidden w-12 h-12 md:w-16 md:h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-xl md:text-2xl shadow-lg transition flex-shrink-0">
                                 <span>🔇</span>
                             </button>
                             
@@ -213,9 +213,9 @@
                 <div class="bg-white rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6 hidden md:block">
                     <h3 id="aboutTitle" class="text-base md:text-xl font-bold text-gray-800 mb-3 md:mb-4">🤖 About Krishi AI</h3>
                     <div class="space-y-4">
-                        <div class="flex items-center space-x-3"><span class="text-2xl">🧠</span><div><p class="font-semibold text-gray-800">AI-Powered</p><p class="text-sm text-gray-500">Google Gemini AI</p></div></div>
-                        <div class="flex items-center space-x-3"><span class="text-2xl">🎤</span><div><p class="font-semibold text-gray-800">Voice Enabled</p><p class="text-sm text-gray-500">Speak to get answers</p></div></div>
-                        <div class="flex items-center space-x-3"><span class="text-2xl">🌾</span><div><p class="font-semibold text-gray-800">Farming Expert</p><p class="text-sm text-gray-500">Crops, soil, weather & schemes</p></div></div>
+                        <div class="flex items-center space-x-3"><span class="text-2xl">🧠</span><div><p id="aiPoweredText" class="font-semibold text-gray-800">AI-Powered</p><p class="text-sm text-gray-500">Google Gemini AI</p></div></div>
+                        <div class="flex items-center space-x-3"><span class="text-2xl">🎤</span><div><p id="voiceEnabledText" class="font-semibold text-gray-800">Voice Enabled</p><p id="speakToGetText" class="text-sm text-gray-500">Speak to get answers</p></div></div>
+                        <div class="flex items-center space-x-3"><span class="text-2xl">🌾</span><div><p id="farmingExpertText" class="font-semibold text-gray-800">Farming Expert</p><p id="cropsSoilWeatherText" class="text-sm text-gray-500">Crops, soil, weather & schemes</p></div></div>
                     </div>
                 </div>
 
@@ -301,6 +301,13 @@
             document.getElementById('quickQuestionsTitle').textContent = `💡 ${translations.quick_questions || 'Quick Questions'}`;
             document.getElementById('aboutTitle').textContent = `🤖 ${translations.about || 'About Krishi AI'}`;
             document.getElementById('topicsTitle').textContent = `📚 ${translations.topics || 'I Can Help With'}`;
+            
+            // Update sidebar info panel
+            if (document.getElementById('aiPoweredText')) document.getElementById('aiPoweredText').textContent = translations.ai_powered || 'AI-Powered';
+            if (document.getElementById('voiceEnabledText')) document.getElementById('voiceEnabledText').textContent = translations.voice_enabled || 'Voice Enabled';
+            if (document.getElementById('speakToGetText')) document.getElementById('speakToGetText').textContent = translations.speak_to_get || 'Speak to get answers';
+            if (document.getElementById('farmingExpertText')) document.getElementById('farmingExpertText').textContent = translations.farming_expert || 'Farming Expert';
+            if (document.getElementById('cropsSoilWeatherText')) document.getElementById('cropsSoilWeatherText').textContent = translations.crops_soil_weather || 'Crops, soil, weather & schemes';
         }
 
         function renderTopics(topics) {

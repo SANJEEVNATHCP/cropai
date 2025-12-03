@@ -45,7 +45,13 @@ UI_TRANSLATIONS = {
         'session_time': 'Session Time',
         'select_language': 'Select Language',
         'voice_agent': 'AI Voice Agent',
-        'talk_expert': 'Talk to our AI expert for instant farming advice'
+        'talk_expert': 'Talk to our AI expert for instant farming advice',
+        'ai_powered': 'AI-Powered',
+        'google_gemini': 'Google Gemini AI',
+        'voice_enabled': 'Voice Enabled',
+        'speak_to_get': 'Speak to get answers',
+        'farming_expert': 'Farming Expert',
+        'crops_soil_weather': 'Crops, soil, weather & schemes'
     },
     'hi': {
         'welcome': "नमस्ते! मैं कृषि AI हूं, आपका कृषि सहायक।",
@@ -63,7 +69,13 @@ UI_TRANSLATIONS = {
         'session_time': 'सत्र समय',
         'select_language': 'भाषा चुनें',
         'voice_agent': 'AI वॉइस एजेंट',
-        'talk_expert': 'तुरंत खेती की सलाह के लिए हमारे AI विशेषज्ञ से बात करें'
+        'talk_expert': 'तुरंत खेती की सलाह के लिए हमारे AI विशेषज्ञ से बात करें',
+        'ai_powered': 'AI-संचालित',
+        'google_gemini': 'Google Gemini AI',
+        'voice_enabled': 'आवाज सक्षम',
+        'speak_to_get': 'उत्तर पाने के लिए बोलें',
+        'farming_expert': 'खेती विशेषज्ञ',
+        'crops_soil_weather': 'फसलें, मिट्टी, मौसम और योजनाएं'
     },
     'mr': {
         'welcome': "नमस्कार! मी कृषी AI आहे, तुमचा कृषी सहाय्यक.",
@@ -117,7 +129,13 @@ UI_TRANSLATIONS = {
         'session_time': 'அமர்வு நேரம்',
         'select_language': 'மொழியைத் தேர்ந்தெடுக்கவும்',
         'voice_agent': 'AI குரல் முகவர்',
-        'talk_expert': 'உடனடி விவசாய ஆலோசனைக்கு எங்கள் AI நிபுணரிடம் பேசுங்கள்'
+        'talk_expert': 'உடனடி விவசாய ஆலோசனைக்கு எங்கள் AI நிபுணரிடம் பேசுங்கள்',
+        'ai_powered': 'AI-இயங்கும்',
+        'google_gemini': 'Google Gemini AI',
+        'voice_enabled': 'குரல் இயக்கப்பட்டது',
+        'speak_to_get': 'பதில்களைப் பெற பேசுங்கள்',
+        'farming_expert': 'விவசாய நிபுணர்',
+        'crops_soil_weather': 'பயிர்கள், மண், வானிலை மற்றும் திட்டங்கள்'
     },
     'kn': {
         'welcome': "ನಮಸ್ಕಾರ! ನಾನು ಕೃಷಿ AI, ನಿಮ್ಮ ಕೃಷಿ ಸಹಾಯಕ.",
