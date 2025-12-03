@@ -1116,3 +1116,273 @@ def get_all_govt_crop_data():
             'success': False,
             'error': govt_data.get('error', 'Data not available')
         }), 404
+
+
+# ==================== ACCURACY VERIFICATION SYSTEM ====================
+
+@recommendation_bp.route('/verify', methods=['POST'])
+def verify_prediction_accuracy():
+    """Verify ML predictions against real government data"""
+    global ML_MODEL
+    
+    data = request.get_json()
+    state = data.get('state')
+    season = data.get('season', 'Kharif')
+    
+    if not state:
+        return jsonify({'success': False, 'error': 'State is required'}), 400
+    
+    # Get ML predictions
+    if ML_MODEL is None:
+        load_ml_model()
+    
+    if ML_MODEL is None:
+        return jsonify({'success': False, 'error': 'ML model not trained. Train first: POST /api/recommend/ml/train'}), 400
+    
+    live_weather = get_live_weather(state)
+    
+    inputs = {
+        'state': state,
+        'season': season,
+        'soil_type': data.get('soil_type', 'Loamy'),
+        'water_availability': data.get('water_availability', 'Medium'),
+        'ph': float(data.get('ph', 6.5)),
+        'budget': float(data.get('budget', 100000)),
+        'farm_size': float(data.get('farm_size', 1)),
+        'live_weather': live_weather
+    }
+    
+    ml_recommendations = predict_with_ml(inputs)
+    
+    if not ml_recommendations:
+        return jsonify({'success': False, 'error': 'ML prediction failed'}), 500
+    
+    # Get REAL government data for this state
+    govt_stats = get_govt_crop_statistics(state)
+    govt_data = get_govt_crop_data(state=state)
+    
+    # Extract actual crops grown in this state from government data
+    actual_crops = set()
+    crop_production = {}
+    
+    if govt_stats.get('success'):
+        for crop, stats in govt_stats.get('crop_stats', {}).items():
+            if stats.get('production', 0) > 0:
+                actual_crops.add(crop.lower())
+                crop_production[crop.lower()] = stats.get('production', 0)
+    
+    if govt_data.get('success'):
+        for record in govt_data.get('records', []):
+            crop = str(record.get('crop', record.get('crop_name', ''))).lower().strip()
+            if crop:
+                actual_crops.add(crop)
+                prod = float(record.get('production', 0) or 0)
+                if prod > 0:
+                    crop_production[crop] = crop_production.get(crop, 0) + prod
+    
+    # Compare predictions with actual data
+    predicted_crops = [rec['crop'].lower() for rec in ml_recommendations]
+    
+    matches = []
+    mismatches = []
+    
+    for i, pred_crop in enumerate(predicted_crops):
+        confidence = ml_recommendations[i].get('confidence', 0)
+        
+        # Check if predicted crop is actually grown
+        is_match = pred_crop in actual_crops or any(pred_crop in ac for ac in actual_crops)
+        
+        if is_match:
+            production = crop_production.get(pred_crop, 0)
+            matches.append({
+                'crop': pred_crop.title(),
+                'rank': i + 1,
+                'confidence': confidence,
+                'verified': True,
+                'production_tonnes': production,
+                'status': '✅ VERIFIED - Grown in ' + state
+            })
+        else:
+            mismatches.append({
+                'crop': pred_crop.title(),
+                'rank': i + 1,
+                'confidence': confidence,
+                'verified': False,
+                'status': '❌ NOT VERIFIED - No govt data found'
+            })
+    
+    accuracy = (len(matches) / len(predicted_crops)) * 100 if predicted_crops else 0
+    
+    # Get top actual crops from government data
+    top_actual = sorted(crop_production.items(), key=lambda x: x[1], reverse=True)[:5]
+    
+    return jsonify({
+        'success': True,
+        'state': state,
+        'season': season,
+        'accuracy_percent': round(accuracy, 1),
+        'verification_summary': {
+            'total_predictions': len(predicted_crops),
+            'verified_matches': len(matches),
+            'unverified': len(mismatches)
+        },
+        'matches': matches,
+        'mismatches': mismatches,
+        'actual_top_crops': [
+            {'crop': crop.title(), 'production_tonnes': prod} 
+            for crop, prod in top_actual
+        ],
+        'data_sources': {
+            'predictions': 'ML Model (trained on data.gov.in)',
+            'verification': 'data.gov.in (Real-time API)'
+        },
+        'generated_at': datetime.now().isoformat()
+    }), 200
+
+
+@recommendation_bp.route('/accuracy-report', methods=['GET'])
+def generate_accuracy_report():
+    """Generate accuracy report across multiple states"""
+    global ML_MODEL
+    
+    if ML_MODEL is None:
+        load_ml_model()
+    
+    if ML_MODEL is None:
+        return jsonify({'success': False, 'error': 'ML model not trained'}), 400
+    
+    states = list(STATE_CITIES.keys())[:10]  # Test with 10 states
+    seasons = ['Kharif', 'Rabi']
+    
+    results = []
+    total_accuracy = 0
+    test_count = 0
+    
+    for state in states:
+        for season in seasons:
+            try:
+                inputs = {
+                    'state': state,
+                    'season': season,
+                    'soil_type': 'Loamy',
+                    'water_availability': 'Medium',
+                    'ph': 6.5,
+                    'budget': 100000,
+                    'farm_size': 1,
+                    'live_weather': None
+                }
+                
+                ml_recommendations = predict_with_ml(inputs)
+                if not ml_recommendations:
+                    continue
+                
+                # Get government data
+                govt_stats = get_govt_crop_statistics(state)
+                actual_crops = set()
+                
+                if govt_stats.get('success'):
+                    for crop, stats in govt_stats.get('crop_stats', {}).items():
+                        if stats.get('production', 0) > 0:
+                            actual_crops.add(crop.lower())
+                
+                predicted_crops = [rec['crop'].lower() for rec in ml_recommendations[:3]]
+                matches = sum(1 for pc in predicted_crops if pc in actual_crops or any(pc in ac for ac in actual_crops))
+                
+                accuracy = (matches / len(predicted_crops)) * 100 if predicted_crops else 0
+                total_accuracy += accuracy
+                test_count += 1
+                
+                results.append({
+                    'state': state,
+                    'season': season,
+                    'top_predictions': [rec['crop'] for rec in ml_recommendations[:3]],
+                    'matches': matches,
+                    'accuracy': round(accuracy, 1),
+                    'govt_data_available': govt_stats.get('success', False)
+                })
+            except Exception as e:
+                continue
+    
+    overall_accuracy = total_accuracy / test_count if test_count > 0 else 0
+    
+    return jsonify({
+        'success': True,
+        'overall_accuracy': round(overall_accuracy, 1),
+        'states_tested': len(states),
+        'seasons_tested': len(seasons),
+        'total_tests': test_count,
+        'results': results,
+        'model_info': {
+            'type': 'RandomForestClassifier',
+            'data_source': 'data.gov.in',
+            'training_type': 'Real Government Data'
+        },
+        'interpretation': {
+            'excellent': 'Above 80% - Model predictions highly accurate',
+            'good': '60-80% - Model predictions reliable',
+            'fair': '40-60% - Model needs more training data',
+            'poor': 'Below 40% - Model requires retraining'
+        },
+        'generated_at': datetime.now().isoformat()
+    }), 200
+
+
+@recommendation_bp.route('/compare', methods=['POST'])
+def compare_ml_vs_rules():
+    """Compare ML predictions vs rule-based recommendations"""
+    data = request.get_json()
+    state = data.get('state')
+    season = data.get('season', 'Kharif')
+    
+    if not state:
+        return jsonify({'success': False, 'error': 'State is required'}), 400
+    
+    live_weather = get_live_weather(state)
+    
+    inputs = {
+        'state': state,
+        'season': season,
+        'soil_type': data.get('soil_type', 'Loamy'),
+        'water_availability': data.get('water_availability', 'Medium'),
+        'ph': float(data.get('ph', 6.5)),
+        'budget': float(data.get('budget', 100000)),
+        'farm_size': float(data.get('farm_size', 1)),
+        'risk_preference': data.get('risk_preference', 'medium'),
+        'live_weather': live_weather
+    }
+    
+    # Get rule-based recommendations
+    rule_based = get_recommendations(inputs)
+    
+    # Get ML predictions
+    ml_based = predict_with_ml(inputs) if ML_MODEL else None
+    
+    # Get government data for verification
+    govt_stats = get_govt_crop_statistics(state)
+    actual_crops = set()
+    if govt_stats.get('success'):
+        for crop, stats in govt_stats.get('crop_stats', {}).items():
+            if stats.get('production', 0) > 0:
+                actual_crops.add(crop.lower())
+    
+    comparison = {
+        'success': True,
+        'state': state,
+        'season': season,
+        'rule_based': {
+            'method': 'Rule-Based Scoring',
+            'recommendations': [{'crop': r['crop'], 'score': r['score']} for r in rule_based[:5]],
+            'matches_with_govt': sum(1 for r in rule_based[:3] if r['crop'].lower() in actual_crops)
+        },
+        'ml_based': {
+            'method': 'Machine Learning (Random Forest)',
+            'recommendations': [{'crop': r['crop'], 'confidence': r['confidence']} for r in ml_based[:5]] if ml_based else [],
+            'matches_with_govt': sum(1 for r in ml_based[:3] if r['crop'].lower() in actual_crops) if ml_based else 0,
+            'available': ml_based is not None
+        },
+        'actual_crops_in_state': list(actual_crops)[:10],
+        'recommendation': 'ML predictions are more accurate when trained on sufficient real data' if ml_based else 'Train ML model for better predictions',
+        'generated_at': datetime.now().isoformat()
+    }
+    
+    return jsonify(comparison), 200
