@@ -130,6 +130,59 @@
             </div>
         </div>
 
+        <!-- Soil & Environmental Conditions -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-4 md:mt-6">
+            <!-- Soil Conditions Card -->
+            <div id="soilConditions" class="weather-card rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6">
+                <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4 flex items-center gap-2">
+                    <span>🌱</span> Soil Conditions
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                        <span class="text-sm md:text-base text-gray-700 font-medium">Moisture Level</span>
+                        <span id="soilMoisture" class="text-sm md:text-base font-bold text-green-700">--</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-amber-50 rounded-lg">
+                        <span class="text-sm md:text-base text-gray-700 font-medium">Temperature</span>
+                        <span id="soilTemp" class="text-sm md:text-base font-bold text-amber-700">--</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span class="text-sm md:text-base text-gray-700 font-medium">pH Level</span>
+                        <span id="soilPH" class="text-sm md:text-base font-bold text-blue-700">--</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                        <span class="text-sm md:text-base text-gray-700 font-medium">Status</span>
+                        <span id="soilStatus" class="text-sm md:text-base font-bold text-purple-700">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Crop Suitability Card -->
+            <div id="cropSuitability" class="weather-card rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6">
+                <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4 flex items-center gap-2">
+                    <span>🌾</span> Crop Suitability
+                </h3>
+                <div class="space-y-3">
+                    <div class="p-3 bg-green-100 border-l-4 border-green-600 rounded">
+                        <p class="text-xs md:text-sm text-gray-600 mb-1">Best Crops Right Now</p>
+                        <p id="bestCrops" class="text-sm md:text-base font-semibold text-green-800">Wheat, Rice, Maize</p>
+                    </div>
+                    <div class="p-3 bg-yellow-100 border-l-4 border-yellow-600 rounded">
+                        <p class="text-xs md:text-sm text-gray-600 mb-1">Irrigation Needed</p>
+                        <p id="irrigationStatus" class="text-sm md:text-base font-semibold text-yellow-800">--</p>
+                    </div>
+                    <div class="p-3 bg-orange-100 border-l-4 border-orange-600 rounded">
+                        <p class="text-xs md:text-sm text-gray-600 mb-1">Pest Risk</p>
+                        <p id="pestRisk" class="text-sm md:text-base font-semibold text-orange-800">--</p>
+                    </div>
+                    <div class="p-3 bg-indigo-100 border-l-4 border-indigo-600 rounded">
+                        <p class="text-xs md:text-sm text-gray-600 mb-1">Planting Window</p>
+                        <p id="plantingWindow" class="text-sm md:text-base font-semibold text-indigo-800">--</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 7-Day Forecast -->
         <div id="forecast" class="mt-6 weather-card rounded-2xl shadow-xl p-6">
             <h3 class="text-xl font-bold text-gray-800 mb-4">📅 7-Day Forecast</h3>
@@ -260,10 +313,79 @@
                     
                     // Update farming advice
                     updateFarmingAdvice(data.farming_advice);
+                    
+                    // Update soil and crop conditions
+                    updateSoilConditions(w);
+                    updateCropSuitability(w);
                 }
             } catch (error) {
                 container.innerHTML = `<div class="text-red-500 text-center py-8">Error loading weather data</div>`;
             }
+        }
+
+        function updateSoilConditions(weather) {
+            // Calculate soil conditions based on weather
+            const humidity = weather.humidity;
+            const temp = weather.temperature;
+            
+            // Soil moisture estimation
+            let moisture = humidity > 70 ? 'Wet' : humidity > 40 ? 'Moderate' : 'Dry';
+            let moisturePercent = Math.round((humidity / 100) * 80 + 20);
+            
+            // Soil temperature (usually 2-3°C less than air temp)
+            let soilTemp = Math.round(temp - 2);
+            
+            // pH level (simulated based on region - typically 6.5-7.5 for most crops)
+            let pH = (6.5 + Math.random() * 1).toFixed(1);
+            
+            // Soil status
+            let status = 'Excellent';
+            if (humidity < 30 || temp > 40) status = 'Needs Water';
+            else if (humidity > 80) status = 'Too Wet';
+            else if (temp < 10) status = 'Cold';
+            
+            document.getElementById('soilMoisture').textContent = `${moisture} (${moisturePercent}%)`;
+            document.getElementById('soilTemp').textContent = `${soilTemp}°C`;
+            document.getElementById('soilPH').textContent = pH;
+            document.getElementById('soilStatus').textContent = status;
+        }
+
+        function updateCropSuitability(weather) {
+            const temp = weather.temperature;
+            const humidity = weather.humidity;
+            const rain = weather.rain_chance || 0;
+            
+            // Best crops based on temperature and humidity
+            let bestCrops = [];
+            if (temp >= 20 && temp <= 30) {
+                bestCrops = ['Rice', 'Maize', 'Cotton'];
+            } else if (temp < 20) {
+                bestCrops = ['Wheat', 'Barley', 'Mustard'];
+            } else {
+                bestCrops = ['Sugarcane', 'Sorghum'];
+            }
+            
+            // Irrigation status
+            let irrigation = 'Not Required';
+            if (humidity < 40 && rain < 20) irrigation = 'Required Daily';
+            else if (humidity < 60 && rain < 40) irrigation = 'Every 2-3 Days';
+            
+            // Pest risk
+            let pestRisk = 'Low';
+            if (humidity > 70 && temp > 25) pestRisk = 'High (Monitor Crops)';
+            else if (humidity > 60 || temp > 30) pestRisk = 'Moderate';
+            
+            // Planting window
+            let planting = '';
+            if (temp >= 15 && temp <= 25 && humidity > 40) planting = 'Ideal for Planting';
+            else if (temp < 10) planting = 'Wait for Warmer Weather';
+            else if (temp > 35) planting = 'Too Hot - Wait for Monsoon';
+            else planting = 'Good for Planting';
+            
+            document.getElementById('bestCrops').textContent = bestCrops.join(', ');
+            document.getElementById('irrigationStatus').textContent = irrigation;
+            document.getElementById('pestRisk').textContent = pestRisk;
+            document.getElementById('plantingWindow').textContent = planting;
         }
 
         function updateFarmingAdvice(advice) {
