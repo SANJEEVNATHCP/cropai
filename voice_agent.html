@@ -236,7 +236,7 @@
     <script>
         const API_BASE_URL = window.location.origin;
         let isListening = false, isSpeaking = false, recognition, synthesis = window.speechSynthesis;
-        let currentLanguage = localStorage.getItem('preferredLanguage') || 'en';
+        let currentLanguage = localStorage.getItem('siteLanguage') || 'en';
         let currentSpeechCode = 'en-IN', translations = {}, availableLanguages = [];
 
         const quickQuestions = {
@@ -271,7 +271,7 @@
 
         async function changeLanguage(langCode) {
             currentLanguage = langCode;
-            localStorage.setItem('preferredLanguage', langCode);
+            localStorage.setItem('siteLanguage', langCode);
             
             try {
                 const response = await fetch(`${API_BASE_URL}/api/voice/translations/${langCode}`);
