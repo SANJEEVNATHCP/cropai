@@ -77,6 +77,6 @@
   <!-- Text -->
   <text x="100" y="188" text-anchor="middle" fill="#047857" font-size="18" font-weight="bold" 
         font-family="'Segoe UI', Arial, sans-serif" letter-spacing="1">
-    CROPYIELD <tspan fill="#3b82f6">AI</tspan>
+    CROPYIELD <tspan fill="#1d4ed8" font-size="22" font-weight="900">AI</tspan>
   </text>
 </svg>
