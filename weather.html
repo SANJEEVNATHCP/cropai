@@ -18,7 +18,7 @@
         }
     </script>
     <style>
-        .gradient-bg { background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%); }
+        .gradient-bg { background: linear-gradient(135deg, #166534 0%, #15803d 50%, #16a34a 100%); }
         .weather-card { backdrop-filter: blur(10px); background: rgba(255,255,255,0.95); }
         .mobile-menu { display: none; }
         .mobile-menu.active { display: block; }
@@ -31,12 +31,9 @@
     <!-- Header -->
     <header class="gradient-bg text-white shadow-lg sticky top-0 z-50">
         <div class="container mx-auto px-4 py-4 flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-                <a href="/" class="flex items-center space-x-2">
-                    <span class="text-3xl">🌾</span>
-                    <h1 class="text-2xl font-bold">CropYield<span class="text-yellow-300">AI</span></h1>
-                </a>
-            </div>
+            <a href="/" class="flex items-center">
+                <img src="/logo.svg" alt="CropYield AI" style="height: 50px; width: auto;">
+            </a>
             <nav class="hidden md:flex space-x-6">
                 <a href="/yield" class="hover:text-yellow-300 transition" data-i18n="nav_yield">Yield Prediction</a>
                 <a href="/recommendation" class="hover:text-yellow-300 transition" data-i18n="nav_recommend">Crop Recommendation</a>
