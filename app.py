@@ -94,6 +94,11 @@ def weather_page():
 def favicon():
     return '', 204
 
+# Explicit static files route
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(app.static_folder, filename)
+
 # Health check
 @app.route('/api/health')
 def health():
