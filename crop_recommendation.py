@@ -6,8 +6,95 @@ import random
 
 recommendation_bp = Blueprint('recommendation', __name__)
 
-# OpenWeatherMap API key
+# API Keys
 OPENWEATHER_API_KEY = 'b576d8a952bf4c45c7ef5bddb148e76b'
+DATA_GOV_API_KEY = '579b464db66ec23bdd00000135adb2e1402f446e7a24549732293525'
+
+# data.gov.in API base URL
+DATA_GOV_BASE_URL = 'https://api.data.gov.in/resource'
+
+
+def get_govt_crop_data(state=None, crop=None):
+    """Fetch crop data from data.gov.in API"""
+    try:
+        # Agriculture statistics resource ID (crop production data)
+        resource_id = '9ef84268-d588-465a-a308-a864a43d0070'
+        
+        url = f"{DATA_GOV_BASE_URL}/{resource_id}"
+        params = {
+            'api-key': DATA_GOV_API_KEY,
+            'format': 'json',
+            'limit': 100
+        }
+        
+        if state:
+            params['filters[state_name]'] = state
+        if crop:
+            params['filters[crop]'] = crop
+            
+        response = requests.get(url, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if 'records' in data:
+                return {
+                    'success': True,
+                    'records': data['records'],
+                    'total': data.get('total', len(data['records'])),
+                    'source': 'data.gov.in'
+                }
+        return {'success': False, 'error': 'No data found'}
+    except Exception as e:
+        print(f"data.gov.in API error: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def get_govt_crop_statistics(state):
+    """Get crop production statistics for a state from government data"""
+    try:
+        # Try multiple resource IDs for crop data
+        resource_ids = [
+            '9ef84268-d588-465a-a308-a864a43d0070',  # Crop production
+            '35be999b-68d1-4fc5-8094-6e0b88c7ce4c',  # Agriculture statistics
+        ]
+        
+        for resource_id in resource_ids:
+            url = f"{DATA_GOV_BASE_URL}/{resource_id}"
+            params = {
+                'api-key': DATA_GOV_API_KEY,
+                'format': 'json',
+                'limit': 50,
+                'filters[state_name]': state
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'records' in data and len(data['records']) > 0:
+                    # Process and return crop statistics
+                    crop_stats = {}
+                    for record in data['records']:
+                        crop_name = record.get('crop', record.get('crop_name', '')).lower()
+                        if crop_name:
+                            production = float(record.get('production', record.get('production_tonnes', 0)) or 0)
+                            area = float(record.get('area', record.get('area_hectares', 0)) or 0)
+                            
+                            if crop_name not in crop_stats:
+                                crop_stats[crop_name] = {'production': 0, 'area': 0}
+                            crop_stats[crop_name]['production'] += production
+                            crop_stats[crop_name]['area'] += area
+                    
+                    return {
+                        'success': True,
+                        'crop_stats': crop_stats,
+                        'source': 'data.gov.in'
+                    }
+        
+        return {'success': False, 'error': 'No statistics available'}
+    except Exception as e:
+        print(f"Government statistics error: {e}")
+        return {'success': False, 'error': str(e)}
 
 # State capital cities for weather lookup
 STATE_CITIES = {
@@ -353,11 +440,23 @@ def calculate_crop_score(crop_name, crop_data, inputs):
 
 
 def get_recommendations(inputs):
-    """Get crop recommendations based on inputs"""
+    """Get crop recommendations based on inputs with government data integration"""
     recommendations = []
+    state = inputs.get('state', '')
+    
+    # Try to get government crop statistics for the state
+    govt_stats = get_govt_crop_statistics(state)
+    govt_crop_data = govt_stats.get('crop_stats', {}) if govt_stats.get('success') else {}
     
     for crop_name, crop_data in CROPS_DATABASE.items():
         score, reasons = calculate_crop_score(crop_name, crop_data, inputs)
+        
+        # Boost score if government data shows this crop is grown in the state
+        if crop_name in govt_crop_data:
+            govt_info = govt_crop_data[crop_name]
+            if govt_info.get('production', 0) > 0:
+                score += 5
+                reasons.append(f"📊 Govt data: Grown in {state} (production: {govt_info['production']:,.0f} tonnes)")
         
         if score >= 40:  # Only include somewhat suitable crops
             profit = crop_data['expected_revenue'] - crop_data['investment_per_ha']
@@ -432,12 +531,14 @@ def get_crop_recommendations():
         'success': True,
         'recommendations': recommendations,
         'inputs': inputs,
-        'generated_at': datetime.now().isoformat()
+        'generated_at': datetime.now().isoformat(),
+        'data_sources': ['Local Crop Database', 'data.gov.in (Government of India)']
     }
     
     if live_weather:
         response['live_weather'] = live_weather
         response['weather_used'] = True
+        response['data_sources'].append('OpenWeatherMap (Live Weather)')
     
     return jsonify(response), 200
 
@@ -489,3 +590,43 @@ def get_states():
         'success': True,
         'states': states
     }), 200
+
+
+@recommendation_bp.route('/govt-data/<state>', methods=['GET'])
+def get_government_crop_data(state):
+    """Get crop production data from data.gov.in for a state"""
+    govt_data = get_govt_crop_statistics(state)
+    
+    if govt_data['success']:
+        return jsonify({
+            'success': True,
+            'state': state,
+            'crop_statistics': govt_data['crop_stats'],
+            'source': 'data.gov.in (Government of India)',
+            'api_info': 'Official agricultural statistics'
+        }), 200
+    else:
+        return jsonify({
+            'success': False,
+            'error': govt_data.get('error', 'Government data not available'),
+            'fallback': 'Using local crop database'
+        }), 200
+
+
+@recommendation_bp.route('/govt-crops', methods=['GET'])
+def get_all_govt_crop_data():
+    """Get all available crop data from data.gov.in"""
+    govt_data = get_govt_crop_data()
+    
+    if govt_data['success']:
+        return jsonify({
+            'success': True,
+            'total_records': govt_data['total'],
+            'records': govt_data['records'][:20],  # Limit to 20 for display
+            'source': 'data.gov.in'
+        }), 200
+    else:
+        return jsonify({
+            'success': False,
+            'error': govt_data.get('error', 'Data not available')
+        }), 404
