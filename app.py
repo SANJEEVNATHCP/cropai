@@ -108,38 +108,40 @@ def logo():
       <stop offset="0%" style="stop-color:#34d399"/>
       <stop offset="100%" style="stop-color:#10b981"/>
     </linearGradient>
+    <linearGradient id="grad3" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#6ee7b7"/>
+      <stop offset="100%" style="stop-color:#34d399"/>
+    </linearGradient>
     <linearGradient id="techGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#3b82f6"/>
       <stop offset="100%" style="stop-color:#1d4ed8"/>
     </linearGradient>
   </defs>
-  
-  <!-- Flat-top hexagon (perfectly straight) -->
-  <polygon points="100,20 160,60 160,140 100,180 40,140 40,60" 
-           fill="url(#grad1)" stroke="#047857" stroke-width="3"/>
-  
-  <!-- Inner hexagon -->
-  <polygon points="100,35 150,65 150,135 100,165 50,135 50,65" 
-           fill="none" stroke="#ffffff" stroke-width="1" opacity="0.2"/>
-  
-  <!-- Leaf icon - centered and symmetrical -->
-  <g transform="translate(100, 100)">
-    <!-- Left leaf -->
-    <path d="M -20,-10 L -30,0 L -25,15 L -15,20 L -10,10 Z" fill="url(#grad2)"/>
-    <!-- Right leaf -->
-    <path d="M 20,-10 L 30,0 L 25,15 L 15,20 L 10,10 Z" fill="#34d399"/>
-    <!-- Center stem -->
-    <rect x="-3" y="15" width="6" height="25" fill="#047857" rx="1"/>
-    <!-- Top leaf -->
-    <ellipse cx="0" cy="-15" rx="12" ry="8" fill="#6ee7b7"/>
+  <polygon points="100,10 170,50 170,130 100,170 30,130 30,50" fill="url(#grad1)" stroke="#047857" stroke-width="3"/>
+  <polygon points="100,25 155,55 155,125 100,155 45,125 45,55" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.2"/>
+  <polygon points="100,70 70,90 80,110 100,120" fill="url(#grad2)"/>
+  <polygon points="70,90 60,100 70,115 80,110" fill="#047857" opacity="0.7"/>
+  <polygon points="100,70 130,90 120,110 100,120" fill="url(#grad3)"/>
+  <polygon points="130,90 140,100 130,115 120,110" fill="#059669" opacity="0.7"/>
+  <polygon points="95,120 105,120 103,145 97,145" fill="#047857"/>
+  <polygon points="100,50 90,70 100,75 110,70" fill="#34d399"/>
+  <g transform="translate(100, 155)">
+    <polygon points="0,-8 8,0 0,8 -8,0" fill="url(#techGrad)" stroke="#1e40af" stroke-width="1.5"/>
+    <polygon points="0,-5 5,0 0,5 -5,0" fill="#60a5fa" opacity="0.4"/>
+    <circle cx="-10" cy="0" r="1.5" fill="#3b82f6"/>
+    <circle cx="10" cy="0" r="1.5" fill="#3b82f6"/>
+    <line x1="-8" y1="0" x2="-10" y2="0" stroke="#60a5fa" stroke-width="1"/>
+    <line x1="8" y1="0" x2="10" y2="0" stroke="#60a5fa" stroke-width="1"/>
   </g>
-  
-  <!-- AI chip at bottom -->
-  <g transform="translate(100, 160)">
-    <rect x="-10" y="-6" width="20" height="12" fill="url(#techGrad)" rx="2" stroke="#1e40af" stroke-width="1"/>
-    <rect x="-6" y="-3" width="12" height="6" fill="#60a5fa" opacity="0.4" rx="1"/>
-    <circle cx="-12" cy="0" r="1.5" fill="#3b82f6"/>
-    <circle cx="12" cy="0" r="1.5" fill="#3b82f6"/>
+  <polygon points="30,50 35,48 33,53" fill="#34d399" opacity="0.5"/>
+  <polygon points="170,50 165,48 167,53" fill="#34d399" opacity="0.5"/>
+  <polygon points="30,130 35,132 33,127" fill="#34d399" opacity="0.5"/>
+  <polygon points="170,130 165,132 167,127" fill="#34d399" opacity="0.5"/>
+  <g opacity="0.15" stroke="#ffffff" stroke-width="1">
+    <line x1="50" y1="60" x2="70" y2="60"/>
+    <line x1="130" y1="60" x2="150" y2="60"/>
+    <line x1="50" y1="120" x2="70" y2="120"/>
+    <line x1="130" y1="120" x2="150" y2="120"/>
   </g>
 </svg>'''
     return Response(svg_content, mimetype='image/svg+xml')
