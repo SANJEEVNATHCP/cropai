@@ -184,6 +184,11 @@
                                 </button>
                             </div>
                             
+                            <button id="stopSpeakBtn" onclick="stopSpeaking()" 
+                                class="w-12 h-12 md:w-16 md:h-16 bg-red-600 hover:bg-red-700 text-white rounded-full items-center justify-center text-xl md:text-2xl shadow-lg transition flex-shrink-0 hidden">
+                                <span>🔇</span>
+                            </button>
+                            
                             <button id="voiceBtn" onclick="toggleVoice()" 
                                 class="w-12 h-12 md:w-16 md:h-16 bg-green-600 hover:bg-green-700 text-white rounded-full flex items-center justify-center text-xl md:text-2xl shadow-lg transition relative flex-shrink-0">
                                 <span id="micIcon">🎤</span>
@@ -230,7 +235,7 @@
 
     <script>
         const API_BASE_URL = window.location.origin;
-        let isListening = false, recognition, synthesis = window.speechSynthesis;
+        let isListening = false, isSpeaking = false, recognition, synthesis = window.speechSynthesis;
         let currentLanguage = localStorage.getItem('preferredLanguage') || 'en';
         let currentSpeechCode = 'en-IN', translations = {}, availableLanguages = [];
 
@@ -429,25 +434,129 @@
         function speak(text, speechCode) {
             if (!synthesis) return;
             synthesis.cancel();
-            const clean = text.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/\*\*/g, '').replace(/•/g, '').substring(0, 500);
+            
+            // Clean text but preserve the content in the original language
+            const clean = text.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/\*\*/g, '').replace(/•/g, '');
+            
             const utterance = new SpeechSynthesisUtterance(clean);
             utterance.lang = speechCode || currentSpeechCode;
             utterance.rate = 0.9;
-            const voices = synthesis.getVoices();
-            const langVoice = voices.find(v => v.lang.startsWith(speechCode?.split('-')[0] || 'en'));
-            if (langVoice) utterance.voice = langVoice;
-            document.getElementById('voiceWaveContainer').classList.remove('hidden');
-            document.getElementById('voiceWave').classList.remove('inactive');
-            document.getElementById('agentStatus').textContent = translations.speaking || 'Speaking...';
-            utterance.onend = () => {
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            
+            // Wait for voices to load
+            const setVoice = () => {
+                const voices = synthesis.getVoices();
+                console.log(`[TTS] Available voices: ${voices.length}, Looking for: ${speechCode}`);
+                
+                // Try exact match first (e.g., 'hi-IN')
+                let voice = voices.find(v => v.lang === speechCode);
+                
+                // If not found, try language code only (e.g., 'hi')
+                if (!voice && speechCode) {
+                    const langCode = speechCode.split('-')[0];
+                    voice = voices.find(v => v.lang.startsWith(langCode));
+                }
+                
+                // If still not found, try any Indian English voice for fallback
+                if (!voice && speechCode && speechCode !== 'en-IN') {
+                    voice = voices.find(v => v.lang === 'en-IN');
+                }
+                
+                if (voice) {
+                    utterance.voice = voice;
+                    console.log(`[TTS] Using voice: ${voice.name} (${voice.lang})`);
+                } else {
+                    console.warn(`[TTS] No voice found for ${speechCode}, using default`);
+                }
+                
+                isSpeaking = true;
+                document.getElementById('voiceWaveContainer').classList.remove('hidden');
+                document.getElementById('voiceWave').classList.remove('inactive');
+                document.getElementById('agentStatus').textContent = translations.speaking || 'Speaking...';
+                document.getElementById('stopSpeakBtn').classList.remove('hidden');
+                document.getElementById('stopSpeakBtn').classList.add('flex');
+                
+                utterance.onstart = () => {
+                    isSpeaking = true;
+                };
+                
+                utterance.onend = () => {
+                    isSpeaking = false;
+                    document.getElementById('voiceWave').classList.add('inactive');
+                    document.getElementById('voiceWaveContainer').classList.add('hidden');
+                    document.getElementById('agentStatus').textContent = translations.ready || 'Ready to help you';
+                    document.getElementById('stopSpeakBtn').classList.add('hidden');
+                    document.getElementById('stopSpeakBtn').classList.remove('flex');
+                };
+                
+                utterance.onerror = (e) => {
+                    console.error('[TTS] Error:', e);
+                    isSpeaking = false;
+                    document.getElementById('voiceWave').classList.add('inactive');
+                    document.getElementById('voiceWaveContainer').classList.add('hidden');
+                    document.getElementById('agentStatus').textContent = translations.ready || 'Ready to help you';
+                    document.getElementById('stopSpeakBtn').classList.add('hidden');
+                    document.getElementById('stopSpeakBtn').classList.remove('flex');
+                };
+                
+                synthesis.speak(utterance);
+            };
+            
+            // Ensure voices are loaded before speaking
+            if (synthesis.getVoices().length > 0) {
+                setVoice();
+            } else {
+                synthesis.onvoiceschanged = setVoice;
+            }
+        }
+
+        function stopSpeaking() {
+            if (synthesis && isSpeaking) {
+                synthesis.cancel();
+                isSpeaking = false;
                 document.getElementById('voiceWave').classList.add('inactive');
                 document.getElementById('voiceWaveContainer').classList.add('hidden');
                 document.getElementById('agentStatus').textContent = translations.ready || 'Ready to help you';
-            };
-            synthesis.speak(utterance);
+                document.getElementById('stopSpeakBtn').classList.add('hidden');
+                document.getElementById('stopSpeakBtn').classList.remove('flex');
+                console.log('[TTS] Speech stopped by user');
+            }
         }
-
+        
         document.getElementById('userInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+        
+        // Debug function to check available voices
+        function checkAvailableVoices() {
+            const voices = speechSynthesis.getVoices();
+            console.log('=== Available TTS Voices (' + voices.length + ') ===');
+            voices.forEach(v => {
+                console.log(`${v.name} (${v.lang}) ${v.default ? '- DEFAULT' : ''}`);
+            });
+            
+            // Check for Indian language voices
+            const indianVoices = voices.filter(v => v.lang.includes('-IN'));
+            console.log(`\n=== Indian Voices (${indianVoices.length}) ===`);
+            indianVoices.forEach(v => console.log(`${v.name} (${v.lang})`));
+            
+            // Log current language setting
+            console.log(`\nCurrent Language: ${currentLanguage}`);
+            console.log(`Current Speech Code: ${currentSpeechCode}`);
+        }
+        
+        // Auto-check voices after page load
+        setTimeout(() => {
+            if (speechSynthesis.getVoices().length > 0) {
+                checkAvailableVoices();
+            } else {
+                speechSynthesis.onvoiceschanged = () => {
+                    checkAvailableVoices();
+                };
+            }
+        }, 1000);
+        
+        // Make checkAvailableVoices available globally for manual testing
+        window.checkAvailableVoices = checkAvailableVoices;
         
         // Site-wide language translations
         const siteTranslations = {
