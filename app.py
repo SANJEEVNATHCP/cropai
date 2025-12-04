@@ -64,9 +64,14 @@ app.register_blueprint(livekit_bp, url_prefix='/api/livekit')
 
 print("✅ All routes registered")
 
-# Root route
+# Root route - Splash screen
 @app.route('/')
 def index():
+    return render_template('splash.html')
+
+# Home page
+@app.route('/home')
+def home():
     return render_template('index.html')
 
 # Yield Prediction Page
