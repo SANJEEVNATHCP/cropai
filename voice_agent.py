@@ -366,69 +366,59 @@ GOVT_SCHEMES = [
     }
 ]
 
-def call_gemini_ai(user_message, language='en'):
-    """Call Google Gemini API for intelligent response in specified language"""
+def call_ollama_ai(user_message, language='en'):
+    """Call Ollama API for intelligent response in specified language"""
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
-        
+        url = "https://api.ollama.ai/v1/generate"
+        api_key = "ed79412f2fb345a8997b70a620554e10"
+
         # Get language-specific system prompt
         system_prompt = get_language_prompt(language)
         lang_name = SUPPORTED_LANGUAGES.get(language, {}).get('name', 'English')
-        
-        # Prepare context with knowledge base
-        context = """
-KNOWLEDGE BASE:
-Crops: Rice (Kharif, 120-150 days), Wheat (Rabi, 110-130 days), Cotton (Kharif, 150-180 days), Sugarcane (10-12 months)
-Government Schemes: PM-KISAN (Rs.6,000/year), PMFBY (crop insurance), KCC (4% loan), Soil Health Card (free testing)
-MSP 2024-25: Paddy Rs.2,300/q, Wheat Rs.2,275/q, Cotton Rs.7,121/q
-Seasons: Kharif (June-Oct), Rabi (Nov-Apr), Zaid (Mar-Jun)
-"""
-        
+
         payload = {
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": f"{system_prompt}\n\n{context}\n\nFarmer's Question (respond in {lang_name}): {user_message}"}]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 500
-            }
+            "prompt": f"{system_prompt}\n\nFarmer's Question (respond in {lang_name}): {user_message}",
+            "max_tokens": 500,
+            "temperature": 0.7
         }
-        
-        print(f"[GEMINI] Calling API for: {user_message[:50]}... (lang={language})")
-        response = http_requests.post(url, json=payload, timeout=30)
-        print(f"[GEMINI] Response status: {response.status_code}")
-        
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+
+        print(f"[OLLAMA] Calling API for: {user_message[:50]}... (lang={language})")
+        response = http_requests.post(url, json=payload, headers=headers, timeout=30)
+        print(f"[OLLAMA] Response status: {response.status_code}")
+
         if response.status_code == 200:
             result = response.json()
-            if 'candidates' in result and len(result['candidates']) > 0:
-                ai_text = result['candidates'][0]['content']['parts'][0]['text']
-                print(f"[GEMINI] Success! Response length: {len(ai_text)}")
+            if "text" in result:
+                ai_text = result["text"]
+                print(f"[OLLAMA] Success! Response length: {len(ai_text)}")
                 return ai_text
         else:
-            print(f"[GEMINI] Error: {response.text}")
-        
+            print(f"[OLLAMA] Error: {response.text}")
+
         # If API fails, fall back to keyword matching
         return None
-        
+
     except Exception as e:
-        print(f"[GEMINI] Exception: {e}")
+        print(f"[OLLAMA] Exception: {e}")
         return None
 
 
 def generate_response(message, language='en'):
-    """Generate AI response - tries Gemini first, then falls back to keyword matching"""
-    
-    # Try Gemini AI first
-    ai_response = call_gemini_ai(message, language)
+    """Generate AI response - tries Ollama first, then falls back to keyword matching"""
+
+    # Try Ollama AI first
+    ai_response = call_ollama_ai(message, language)
     if ai_response:
         return ai_response
-    
+
     # Fallback to keyword-based responses
     message_lower = message.lower()
-    
+
     # Crop-specific queries
     for crop, info in CROP_INFO.items():
         if crop in message_lower:

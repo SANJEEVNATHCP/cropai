@@ -3,6 +3,11 @@ import json
 import os
 import requests
 from datetime import datetime, timedelta
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+import pickle
 
 yield_bp = Blueprint('yield', __name__)
 
@@ -409,6 +414,48 @@ def generate_recommendations(crop, n, p, k, ph, rainfall, category):
     return recommendations
 
 
+# Placeholder for data collection from APIs
+def collect_data():
+    # Simulate data collection from NASA POWER and OpenWeather APIs
+    data = {
+        'temperature': [25, 30, 28, 22, 27],
+        'humidity': [60, 65, 70, 55, 68],
+        'precipitation': [5, 10, 0, 2, 8],
+        'solar_radiation': [18, 20, 19, 17, 21],
+        'soil_moisture': [0.5, 0.6, 0.4, 0.3, 0.7],
+        'yield': [4000, 4500, 4200, 3800, 4600]
+    }
+    return pd.DataFrame(data)
+
+# Train the ML model
+def train_model():
+    data = collect_data()
+    X = data.drop(columns=['yield'])
+    y = data['yield']
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    predictions = model.predict(X_test)
+    mse = mean_squared_error(y_test, predictions)
+    print(f"Model trained. Mean Squared Error: {mse}")
+
+    # Save the model
+    with open('yield_model.pkl', 'wb') as f:
+        pickle.dump(model, f)
+
+# Predict yield using the trained model
+def predict_yield_model(features):
+    print("[DEBUG] ML MODEL: Predicting yield with features:", features)
+    with open('yield_model.pkl', 'rb') as f:
+        model = pickle.load(f)
+    
+    prediction = model.predict([features])
+    print("[DEBUG] ML MODEL: Prediction result:", prediction[0])
+    return prediction[0]
+
 @yield_bp.route('/predict', methods=['POST'])
 def predict():
     """Predict crop yield based on inputs"""
@@ -580,3 +627,40 @@ def get_states():
         'success': True,
         'states': states
     }), 200
+
+def collect_data():
+    # Simulate data collection from NASA POWER and OpenWeather APIs
+    data = {
+        'temperature': [25, 30, 28, 22, 27],
+        'humidity': [60, 65, 70, 55, 68],
+        'precipitation': [5, 10, 0, 2, 8],
+        'solar_radiation': [18, 20, 19, 17, 21],
+        'soil_moisture': [0.5, 0.6, 0.4, 0.3, 0.7],
+        'yield': [4000, 4500, 4200, 3800, 4600]
+    }
+    return pd.DataFrame(data)
+
+# Train the ML model
+def train_model():
+    data = collect_data()
+    X = data.drop(columns=['yield'])
+    y = data['yield']
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    predictions = model.predict(X_test)
+    mse = mean_squared_error(y_test, predictions)
+    # Save the model
+    with open('yield_model.pkl', 'wb') as f:
+        pickle.dump(model, f)
+
+# Predict yield using the trained model
+def predict_yield_model(features):
+    with open('yield_model.pkl', 'rb') as f:
+        model = pickle.load(f)
+    
+    prediction = model.predict([features])
+    return prediction[0]

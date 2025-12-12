@@ -20,6 +20,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import requests as http_requests
 import jwt
+from yield_prediction import predict_yield as ml_predict_yield
 
 # Initialize Flask app with templates and static in parent directory
 app = Flask(__name__, 
@@ -331,86 +332,23 @@ def get_yield_weather(state):
 def predict_yield():
     try:
         data = request.get_json()
-        crop = data.get('crop', '').lower()
-        state = data.get('state', '')
-        season = data.get('season', 'Kharif')
-        area = float(data.get('area', 1))
-        
-        if crop not in CROP_DATA:
-            return jsonify({'success': False, 'error': 'Invalid crop'}), 400
-            
-        crop_info = CROP_DATA[crop]
-        base_yield = crop_info['base_yield']
-        
-        # Calculate factors
-        nitrogen = float(data.get('nitrogen', 80))
-        phosphorus = float(data.get('phosphorus', 40))
-        potassium = float(data.get('potassium', 40))
-        ph = float(data.get('ph', 6.5))
-        
-        soil_factor = min(1.3, max(0.7, (nitrogen/100 + phosphorus/50 + potassium/50) / 3))
-        ph_factor = 1.0 - abs(ph - 6.5) * 0.1
-        season_factor = 1.1 if season in crop_info['season'] else 0.85
-        weather_factor = 1.0
-        
-        # Get NASA POWER satellite data
-        nasa_data = None
-        nasa_factor = 1.0
-        nasa_insights = []
-        if data.get('use_nasa_data', True):
-            nasa_data = get_nasa_power_data(state)
-            if nasa_data:
-                nasa_factor, nasa_insights = calculate_nasa_yield_factor(nasa_data, crop)
-        
-        predicted_yield = int(base_yield * soil_factor * ph_factor * season_factor * weather_factor * nasa_factor)
-        total_yield = int(predicted_yield * area)
-        
-        # Higher confidence with NASA data
-        base_confidence = 75 + (soil_factor * 10) + (ph_factor * 5)
-        if nasa_data:
-            base_confidence += 5
-        confidence = min(95, int(base_confidence))
-        
-        category = 'Excellent' if predicted_yield > base_yield * 1.1 else 'Good' if predicted_yield > base_yield * 0.9 else 'Average' if predicted_yield > base_yield * 0.7 else 'Below Average'
-        
-        insights = [f'{crop.title()} grows well in {season} season', f'Soil conditions are {"optimal" if soil_factor > 1 else "fair"}']
-        insights = nasa_insights + insights
-        
-        response_data = {
+        features = [
+            float(data.get('temperature', 25)),
+            float(data.get('humidity', 60)),
+            float(data.get('precipitation', 5)),
+            float(data.get('solar_radiation', 18)),
+            float(data.get('soil_moisture', 0.5))
+        ]
+
+        # Predict yield using the ML model
+        predicted_yield = ml_predict_yield(features)
+
+        return jsonify({
             'success': True,
-            'prediction': {
-                'predicted_yield': predicted_yield,
-                'total_yield': total_yield,
-                'base_yield': base_yield,
-                'confidence': confidence,
-                'category': category,
-                'factors': {
-                    'soil_factor': round(soil_factor, 2),
-                    'weather_factor': round(weather_factor, 2),
-                    'season_factor': round(season_factor, 2),
-                },
-                'insights': insights,
-                'recommendations': ['Consider adding organic matter', 'Monitor water levels regularly']
-            },
-            'data_sources': ['user_input']
-        }
-        
-        if nasa_data:
-            response_data['prediction']['factors']['nasa_satellite_factor'] = nasa_factor
-            response_data['nasa_data'] = {
-                'soil_moisture_index': nasa_data.get('soil_moisture_index'),
-                'soil_condition': nasa_data.get('soil_condition'),
-                'temperature': nasa_data.get('T2M', {}).get('average'),
-                'humidity': nasa_data.get('RH2M', {}).get('average'),
-                'solar_radiation': nasa_data.get('ALLSKY_SFC_SW_DWN', {}).get('average'),
-                'precipitation': nasa_data.get('PRECTOTCORR', {}).get('average')
-            }
-            response_data['data_sources'].append('NASA POWER')
-        
-        return jsonify(response_data)
+            'predicted_yield': predicted_yield
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 @app.route('/api/yield/nasa-data/<state>', methods=['GET'])
 def get_nasa_soil_data(state):
