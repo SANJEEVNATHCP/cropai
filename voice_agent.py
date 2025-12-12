@@ -6,6 +6,7 @@ from flask import Blueprint, request, jsonify
 import requests as http_requests
 import random
 import os
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 voice_agent_bp = Blueprint('voice_agent', __name__)
 
@@ -366,53 +367,34 @@ GOVT_SCHEMES = [
     }
 ]
 
-def call_ollama_ai(user_message, language='en'):
-    """Call Ollama API for intelligent response in specified language"""
+# Load the LLaMA model and tokenizer
+model_path = "path/to/llama3"  # Replace with the path to your LLaMA model
+llama_tokenizer = AutoTokenizer.from_pretrained(model_path)
+llama_model = AutoModelForCausalLM.from_pretrained(model_path)
+
+def call_llama_local(user_message, language='en'):
+    """Generate a response using the local LLaMA model."""
     try:
-        url = "https://api.ollama.ai/v1/generate"
-        api_key = "ed79412f2fb345a8997b70a620554e10"
+        # Prepare the input
+        input_text = f"User: {user_message}\nAI:"
+        inputs = llama_tokenizer(input_text, return_tensors="pt")
 
-        # Get language-specific system prompt
-        system_prompt = get_language_prompt(language)
-        lang_name = SUPPORTED_LANGUAGES.get(language, {}).get('name', 'English')
+        # Generate a response
+        outputs = llama_model.generate(inputs["input_ids"], max_length=500, temperature=0.7)
+        response = llama_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-        payload = {
-            "prompt": f"{system_prompt}\n\nFarmer's Question (respond in {lang_name}): {user_message}",
-            "max_tokens": 500,
-            "temperature": 0.7
-        }
-
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-
-        print(f"[OLLAMA] Calling API for: {user_message[:50]}... (lang={language})")
-        response = http_requests.post(url, json=payload, headers=headers, timeout=30)
-        print(f"[OLLAMA] Response status: {response.status_code}")
-
-        if response.status_code == 200:
-            result = response.json()
-            if "text" in result:
-                ai_text = result["text"]
-                print(f"[OLLAMA] Success! Response length: {len(ai_text)}")
-                return ai_text
-        else:
-            print(f"[OLLAMA] Error: {response.text}")
-
-        # If API fails, fall back to keyword matching
-        return None
-
+        # Extract the AI's response
+        ai_response = response.split("AI:")[-1].strip()
+        return ai_response
     except Exception as e:
-        print(f"[OLLAMA] Exception: {e}")
-        return None
-
+        print(f"[LLAMA] Exception: {e}")
+        return "I'm sorry, I couldn't process your request."
 
 def generate_response(message, language='en'):
-    """Generate AI response - tries Ollama first, then falls back to keyword matching"""
+    """Generate AI response - tries LLaMA first, then falls back to keyword matching"""
 
-    # Try Ollama AI first
-    ai_response = call_ollama_ai(message, language)
+    # Try LLaMA AI first
+    ai_response = call_llama_local(message, language)
     if ai_response:
         return ai_response
 
