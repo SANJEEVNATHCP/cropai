@@ -367,36 +367,11 @@ GOVT_SCHEMES = [
     }
 ]
 
-# Load the LLaMA model and tokenizer
-model_path = "path/to/llama3"  # Replace with the path to your LLaMA model
-llama_tokenizer = AutoTokenizer.from_pretrained(model_path)
-llama_model = AutoModelForCausalLM.from_pretrained(model_path)
-
-def call_llama_local(user_message, language='en'):
-    """Generate a response using the local LLaMA model."""
-    try:
-        # Prepare the input
-        input_text = f"User: {user_message}\nAI:"
-        inputs = llama_tokenizer(input_text, return_tensors="pt")
-
-        # Generate a response
-        outputs = llama_model.generate(inputs["input_ids"], max_length=500, temperature=0.7)
-        response = llama_tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-        # Extract the AI's response
-        ai_response = response.split("AI:")[-1].strip()
-        return ai_response
-    except Exception as e:
-        print(f"[LLAMA] Exception: {e}")
-        return "I'm sorry, I couldn't process your request."
 
 def generate_response(message, language='en'):
-    """Generate AI response - tries LLaMA first, then falls back to keyword matching"""
-
-    # Try LLaMA AI first
-    ai_response = call_llama_local(message, language)
-    if ai_response:
-        return ai_response
+    """Generate AI response - currently only supports fallback keyword matching (LLaMA removed)"""
+    # LLaMA model removed. Implement fallback or other AI logic here.
+    return "I'm sorry, the advanced AI model is currently unavailable. Please try again later or use another feature."
 
     # Fallback to keyword-based responses
     message_lower = message.lower()
