@@ -6,13 +6,13 @@ from flask import Blueprint, request, jsonify
 import requests as http_requests
 import random
 import os
-from transformers import AutoModelForCausalLM, AutoTokenizer
+
 
 voice_agent_bp = Blueprint('voice_agent', __name__)
 
-# Google Gemini API Key - Load from environment variable
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-GEMINI_MODEL = 'gemini-2.0-flash'
+# OpenRouter API Key - Load from environment variable
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
+OPENROUTER_MODEL = os.getenv('OPENROUTER_MODEL', 'openai/gpt-3.5-turbo')
 
 # Supported Languages with their codes and names
 SUPPORTED_LANGUAGES = {
@@ -369,35 +369,32 @@ GOVT_SCHEMES = [
 
 
 def generate_response(message, language='en'):
-    """Generate AI response - currently only supports fallback keyword matching (LLaMA removed)"""
-    # LLaMA model removed. Implement fallback or other AI logic here.
-    return "I'm sorry, the advanced AI model is currently unavailable. Please try again later or use another feature."
-
-    # Fallback to keyword-based responses
-    message_lower = message.lower()
-
-    # Crop-specific queries
-    for crop, info in CROP_INFO.items():
-        if crop in message_lower:
-            tips = random.sample(info['tips'], min(2, len(info['tips'])))
-            return f"""Here's information about {crop.title()} farming:
-
-🌱 **Season:** {', '.join(info['seasons'])}
-⏱️ **Duration:** {info['duration']}
-💧 **Water Need:** {info['water_need']}
-🌍 **Best Soil:** {info['soil']}
-📍 **Top States:** {', '.join(info['states'][:3])}
-
-💡 **Tips:**
-• {tips[0]}
-• {tips[1] if len(tips) > 1 else 'Consult local agricultural officer for variety selection'}
-
-Would you like more details about {crop} diseases or fertilizer management?"""
-
-    # Soil queries
-    if any(word in message_lower for word in ['soil', 'fertility', 'fertilizer', 'manure', 'compost']):
-        tips = random.sample(SOIL_TIPS['fertility'], 3)
-        return f"""Here are tips to improve soil fertility:
+    """Generate AI response using OpenRouter API (GPT-3.5/4, etc). Fallback to keyword if OpenRouter fails."""
+    prompt = f"You are GreenMind AI, an expert agricultural assistant for Indian farmers.\n\nUser message (in {language}): {message}\n\nRespond in the same language."
+    headers = {
+        'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://cropai.app',
+        'X-Title': 'CropYield AI Assistant'
+    }
+    data = {
+        'model': OPENROUTER_MODEL,
+        'messages': [
+            {"role": "system", "content": "You are GreenMind AI, an expert agricultural assistant for Indian farmers."},
+            {"role": "user", "content": message}
+        ]
+    }
+    try:
+        resp = http_requests.post('https://openrouter.ai/api/v1/chat/completions', headers=headers, json=data, timeout=20)
+        if resp.status_code == 200:
+            result = resp.json()
+            return result['choices'][0]['message']['content'].strip()
+        else:
+            print(f"[OpenRouter] Error: {resp.status_code} {resp.text}")
+    except Exception as e:
+        print(f"[OpenRouter] Exception: {e}")
+    # Fallback to default message
+    return "I'm sorry, the AI assistant is currently unavailable. Please try again later."
 
 🧪 **Soil Health Tips:**
 • {tips[0]}
@@ -529,7 +526,7 @@ What crop prices do you want to check?"""
     # Default response
     greetings = ['hello', 'hi', 'namaste', 'good morning', 'good evening']
     if any(greet in message_lower for greet in greetings):
-        return """🙏 Namaste! I'm Krishi AI, your agricultural assistant.
+        return """🙏 Namaste! I'm GreenMind AI, your agricultural assistant.
 
 I can help you with:
 • 🌾 Crop selection and cultivation tips
